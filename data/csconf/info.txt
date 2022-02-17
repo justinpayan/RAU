@@ -1,0 +1,20 @@
+Name: Computer Science Conference Bidding Data
+
+Abbreviation: csconf
+
+Category: MD
+
+Series Number: 00002
+
+Path: MD/csconf
+
+Description: <p>This dataset contains the bidding data from 3 Computer Science Conferences.  This contains the bids of all reviewers (aside a small number of opt-outs) over a subset of papers at the conference.</p> <p>The bidding language for these conferences is <b>yes/maybe/conflict</b>.  In order to make these more useful for PreLib users, we have converted them to incomplete partial orders of the form <b>{yes} > {maybe} > {no response}</b>.  The papers for which a reviewer had a conflict have been removed from their preference list.  All reviewers had different preference orderings, hence each file contains as many entries as reviewers.</p>
+
+Required Citations: 
+
+Selected Studies: 
+
+description, status, file_name
+AI Conference 1, original, MD-00002-00000001.toi
+AI Conference 2, original, MD-00002-00000002.toi
+AI Conference 3, original, MD-00002-00000003.toi

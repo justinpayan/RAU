@@ -1,3 +1,7 @@
+data/cvpr/*
+data/midl/*
+data/cvpr18/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

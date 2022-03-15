@@ -7,9 +7,9 @@ from utils import *
 
 
 def basic_baselines():
-    dset_name = "midl"
-    solver = solve_esw
-    obj = "ESW"
+    dset_name = "cvpr"
+    solver = solve_usw
+    obj = "USW"
 
     tpms, true_bids, covs, loads = load_dset(dset_name)
     print("Solving for max E[%s] using TPMS scores" % obj)
@@ -38,7 +38,10 @@ def query_model():
     obj = "USW"
     seed = 31415
     lamb = 5
-    query_model = VarianceReductionQueryModel(tpms, covs, loads, solver)
+    query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name)
+    # query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
+    # query_model = SuperStarQueryModel(tpms, dset_name)
+    # query_model = RandomQueryModel(tpms)
     expected_obj, alloc, total_bids = run_experiment(dset_name, query_model, solver, seed, lamb)
 
     true_obj = np.sum(alloc * true_bids)

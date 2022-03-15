@@ -5,11 +5,18 @@ from solve_esw import solve_esw
 from solve_usw import solve_usw
 from utils import *
 
+import argparse
+import sys
 
-def basic_baselines():
-    dset_name = "cvpr"
-    solver = solve_usw
-    obj = "USW"
+
+def basic_baselines(dset_name, obj):
+    if obj == "USW":
+        solver = solve_usw
+    elif obj == "ESW":
+        solver = solve_esw
+    else:
+        print("obj must be USW or ESW")
+        sys.exit(0)
 
     tpms, true_bids, covs, loads = load_dset(dset_name)
     print("Solving for max E[%s] using TPMS scores" % obj)
@@ -31,13 +38,13 @@ def basic_baselines():
     print("Optimal %s: %.2f" % (obj, opt))
 
 
-def query_model():
-    dset_name = "midl"
+def query_model(dset_name, obj, lamb, seed):
     tpms, true_bids, covs, loads = load_dset(dset_name)
-    solver = solve_usw
-    obj = "USW"
-    seed = 31415
-    lamb = 5
+    if obj == "USW":
+        solver = solve_usw
+    else:
+        print("USW is the only allowed objective right now")
+        sys.exit(0)
     query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name)
     # query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
     # query_model = SuperStarQueryModel(tpms, dset_name)
@@ -52,7 +59,23 @@ def query_model():
     print("True %s from using TPMS scores: %.2f" % (obj, true_obj))
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dset_name", type=str)
+    parser.add_argument("--lamb", type=int, default=5)
+    parser.add_argument("--seed", type=int, default=31415)
+    parser.add_argument("--obj", type=str, default="USW")
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    query_model()
+    args = parse_args()
+    dset_name = args.dset_name
+    lamb = args.lamb
+    seed = args.seed
+    obj = args.obj
+
+    query_model(dset_name, obj, lamb, seed)
 
 

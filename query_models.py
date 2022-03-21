@@ -417,7 +417,7 @@ class GreedyMaxQueryModel(QueryModel):
 
         if q in np.where(query_model_object.curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")
-            updated_expected_value_if_no, _ = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 0, query_model_object)
+            updated_expected_value_if_no = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 0, query_model_object)
         else:
             updated_expected_value_if_no = query_model_object.curr_expected_value
 
@@ -426,7 +426,7 @@ class GreedyMaxQueryModel(QueryModel):
         if improvement_ub < max_query_val or math.isclose(improvement_ub, max_query_val):
             return query_model_object.curr_expected_value
         else:
-            updated_expected_value_if_yes, _ = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, query_model_object)
+            updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, query_model_object)
 
             expected_expected_value = query_model_object.v_tilde[reviewer, q] * updated_expected_value_if_yes + \
                                       (1 - query_model_object.v_tilde[reviewer, q]) * updated_expected_value_if_no

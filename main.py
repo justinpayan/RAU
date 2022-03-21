@@ -2,7 +2,7 @@
 from experiment_framework import run_experiment
 from query_models import *
 # from solve_esw import solve_esw
-from solve_usw import solve_usw
+from solve_usw import solve_usw, solve_usw_gurobi
 from utils import *
 
 import argparse
@@ -59,13 +59,30 @@ def query_model(dset_name, obj, lamb, seed, data_dir):
     print("Number of reviewers: %d" % loads.shape[0])
     print("Number of bids issued: %d" % total_bids)
     print("E[%s] from using this query model: %.2f" % (obj, expected_obj))
-    print("True %s from using TPMS scores: %.2f" % (obj, true_obj))
+    print("True %s from using this model: %.2f" % (obj, true_obj))
+
+
+def final_solver_swarm(dset_name, obj, lamb, seed, data_dir):
+    tpms, true_bids, covs, loads = load_dset(dset_name, data_dir)
+    v_tilde = np.load(os.path.join(data_dir, "v_tilde_%s" % dset_name))
+    if obj == "USW":
+        solver = solve_usw_gurobi
+    else:
+        print("USW is the only allowed objective right now")
+        sys.exit(0)
+    expected_obj, alloc = solver(v_tilde, covs, loads)
+    true_obj = np.sum(alloc * true_bids)
+
+    print("Number of reviewers: %d" % loads.shape[0])
+    # print("Number of bids issued: %d" % total_bids)
+    print("E[%s] from using this query model: %.2f" % (obj, expected_obj))
+    print("True %s from using this model: %.2f" % (obj, true_obj))
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dset_name", type=str)
-    parser.add_argument("--data_dir", type=str)
+    parser.add_argument("--data_dir", type=str, default=".")
     parser.add_argument("--lamb", type=int, default=5)
     parser.add_argument("--seed", type=int, default=31415)
     parser.add_argument("--obj", type=str, default="USW")
@@ -81,6 +98,7 @@ if __name__ == "__main__":
     seed = args.seed
     obj = args.obj
 
-    query_model(dset_name, obj, lamb, seed, data_dir)
+    # query_model(dset_name, obj, lamb, seed, data_dir)
     # basic_baselines("cvpr", "USW")
+    final_solver_swarm(dset_name, obj, lamb, seed, data_dir)
 

@@ -3,7 +3,8 @@ import random
 from copy import deepcopy
 from collections import defaultdict
 import math
-from multiprocessing import Value
+from multiprocessing import Value, Manager
+import functools
 import numpy as np
 import os
 
@@ -413,10 +414,11 @@ class GreedyMaxQueryModel(QueryModel):
 
 
     @staticmethod
-    def check_expected_value(args):
+    def check_expected_value(args, mqv):
         q, reviewer, query_model_object = args
 
-        print(max_query_val.value, flush=True)
+        print(mqv.value)
+        print(flush=True)
 
         if q in np.where(query_model_object.curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")
@@ -426,7 +428,7 @@ class GreedyMaxQueryModel(QueryModel):
 
         improvement_ub = query_model_object.v_tilde[reviewer, q] * (1 - query_model_object.v_tilde[reviewer, q]) + query_model_object.curr_expected_value
 
-        if improvement_ub < max_query_val.value or math.isclose(improvement_ub, max_query_val.value):
+        if improvement_ub < mqv.value or math.isclose(improvement_ub, mqv.value):
             return query_model_object.curr_expected_value
         else:
             updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, query_model_object)
@@ -434,11 +436,11 @@ class GreedyMaxQueryModel(QueryModel):
             expected_expected_value = query_model_object.v_tilde[reviewer, q] * updated_expected_value_if_yes + \
                                       (1 - query_model_object.v_tilde[reviewer, q]) * updated_expected_value_if_no
             # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
-            if expected_expected_value > max_query_val.value:
-                max_query_val.value = expected_expected_value
+            if expected_expected_value > mqv.value:
+                mqv.value = expected_expected_value
             return expected_expected_value
 
-    def get_query_parallel(self, reviewer, pool, max_query_val):
+    def get_query_parallel(self, reviewer, pool):
         papers_to_check = list(set(range(self.n)) - self.already_queried[reviewer])
 
         # qry_values = {}
@@ -446,11 +448,15 @@ class GreedyMaxQueryModel(QueryModel):
         # check_pool = []
         # for q in papers_to_check:
 
+        # max_query_val = Value('d', 0.0, lock=True)
+        proc_manager = Manager()
+        max_query_val = proc_manager.Value('d', 0.0)
+
         list_of_copied_args = [papers_to_check]
         for argument in [reviewer, self]:
             list_of_copied_args.append(len(papers_to_check) * [argument])
 
-        expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args))
+        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args))
         best_q = papers_to_check[np.argmax(expected_expected_values)]
         return best_q
 

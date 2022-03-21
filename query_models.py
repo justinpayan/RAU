@@ -346,8 +346,8 @@ class GreedyMaxQueryModel(QueryModel):
             self.curr_alloc = np.load(os.path.join(data_dir, "saved_init_max_usw_soln", dset_name + ".npy"))
         except FileNotFoundError:
             print("Recomputing")
-            os.makedirs("saved_init_expected_usw", exist_ok=True)
-            os.makedirs("saved_init_max_usw_soln", exist_ok=True)
+            os.makedirs(os.path.join(data_dir, "saved_init_expected_usw"), exist_ok=True)
+            os.makedirs(os.path.join(data_dir, "saved_init_max_usw_soln"), exist_ok=True)
 
             self.curr_expected_value, self.curr_alloc = self.solver(self.v_tilde, self.covs, self.loads)
             np.save(os.path.join("saved_init_expected_usw", dset_name), self.curr_expected_value)

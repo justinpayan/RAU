@@ -444,9 +444,9 @@ class GreedyMaxQueryModel(QueryModel):
 
             max_query_val = max(qry_values.values()) if qry_values else 0
 
-            list_of_copied_args = [papers_to_check]
+            list_of_copied_args = [next_to_check]
             for argument in [reviewer, max_query_val, self]:
-                list_of_copied_args.append(len(papers_to_check) * [argument])
+                list_of_copied_args.append(len(next_to_check) * [argument])
 
             expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args))
             for q, eev in zip(next_to_check, expected_expected_values):

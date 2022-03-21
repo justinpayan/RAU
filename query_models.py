@@ -440,7 +440,6 @@ class GreedyMaxQueryModel(QueryModel):
 
         check_pool = []
         for q in papers_to_check:
-            print("We have checked %d papers so far" % len(qry_values), flush=True)
             max_query_val = max(qry_values.values()) if qry_values else 0
 
             improvement_ub = self.v_tilde[reviewer, q] * (
@@ -460,6 +459,8 @@ class GreedyMaxQueryModel(QueryModel):
                 expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args))
                 for q, eev in zip(check_pool, expected_expected_values):
                     qry_values[q] = eev
+                check_pool = []
+                print("We have checked %d papers so far" % len(qry_values), flush=True)
 
         if len(check_pool) >= self.num_procs:
             # Run the parallel processes which will check the expected value of these queries.

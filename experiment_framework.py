@@ -1,6 +1,7 @@
 import random
 from tqdm import tqdm
 import multiprocessing as mp
+from multiprocessing import Value
 
 
 from utils import *
@@ -27,8 +28,9 @@ def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir, num_pro
 
         # For each bid, pick the next paper to query based on the model
         for _ in range(num_bids):
+            max_query_val = Value('d', 0.0)
             # query = query_model.get_queries_parallel(r)[0]
-            query = query_model.get_query_parallel(r, pool)
+            query = query_model.get_query_parallel(r, pool, max_query_val)
             # query = query_model.get_query(r)
             query_model.update(r, query, int(true_bids[r, query]))
             print("Next query for reviewer %d was %d" % (r, query))

@@ -7,7 +7,6 @@ from queue import Queue
 
 
 def load_dset(dname):
-    print(os.getcwd())
     tpms = np.load(os.path.join("data", dname, "scores.npy"))
     covs = np.load(os.path.join("data", dname, "covs.npy"))
     loads = np.load(os.path.join("data", dname, "loads.npy"))

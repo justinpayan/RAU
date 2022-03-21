@@ -1,7 +1,7 @@
 
 from experiment_framework import run_experiment
 from query_models import *
-from solve_esw import solve_esw
+# from solve_esw import solve_esw
 from solve_usw import solve_usw
 from utils import *
 
@@ -41,7 +41,10 @@ def basic_baselines(dset_name, obj):
 def query_model(dset_name, obj, lamb, seed):
     tpms, true_bids, covs, loads = load_dset(dset_name)
     if obj == "USW":
-        solver = solve_usw
+        # For now, don't use a solver, we can just expect to load the starting solutions from disk,
+        # and at the end we will write out the v_tilde for input to gurobi separately.
+        solver = None
+        # solver = solve_usw
     else:
         print("USW is the only allowed objective right now")
         sys.exit(0)
@@ -77,5 +80,5 @@ if __name__ == "__main__":
     obj = args.obj
 
     query_model(dset_name, obj, lamb, seed)
-
+    # basic_baselines("cvpr", "USW")
 

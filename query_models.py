@@ -412,7 +412,8 @@ class GreedyMaxQueryModel(QueryModel):
 
 
     @staticmethod
-    def check_expected_value(q, reviewer, max_query_val, query_model_object):
+    def check_expected_value(args):
+        q, reviewer, max_query_val, query_model_object = args
 
         if q in np.where(query_model_object.curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")

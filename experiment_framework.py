@@ -28,7 +28,7 @@ def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir, num_pro
 
         # For each bid, pick the next paper to query based on the model
         for _ in range(num_bids):
-            max_query_val = Value('d', 0.0)
+            max_query_val = Value('d', 0.0, lock=False)
             # query = query_model.get_queries_parallel(r)[0]
             query = query_model.get_query_parallel(r, pool, max_query_val)
             # query = query_model.get_query(r)

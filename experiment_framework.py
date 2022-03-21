@@ -4,8 +4,8 @@ from tqdm import tqdm
 from utils import *
 
 
-def run_experiment(dset_name, query_model, solver, seed, lamb):
-    tpms, true_bids, covs, loads = load_dset(dset_name)
+def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir):
+    tpms, true_bids, covs, loads = load_dset(dset_name, data_dir)
 
     print("%d reviewers, %d papers" % tpms.shape)
 
@@ -41,6 +41,6 @@ def run_experiment(dset_name, query_model, solver, seed, lamb):
         # print("E[USW] right now: ", query_model.curr_expected_value)
 
     # Solve for the objective using the final v_tilde
-    np.save("v_tilde_%s" % dset_name, query_model.v_tilde)
+    np.save(os.path.join(data_dir, "v_tilde_%s" % dset_name), query_model.v_tilde)
     # expected_obj, alloc = solver(query_model.v_tilde, covs, loads)
     # return expected_obj, alloc, total_bids

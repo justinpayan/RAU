@@ -1,6 +1,6 @@
 import numpy as np
 
-from docplex.mp.model import Model
+# from docplex.mp.model import Model
 
 
 def solve_usw(affinity_scores, covs, loads):

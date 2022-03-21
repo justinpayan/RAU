@@ -331,7 +331,7 @@ class VarianceReductionQueryModel(QueryModel):
 # TODO: This won't work for ESW. Need to change the allocation update model and the way I estimate the variance given
 # TODO: some allocation.
 class GreedyMaxQueryModel(QueryModel):
-    def __init__(self, tpms, covs, loads, solver, dset_name):
+    def __init__(self, tpms, covs, loads, solver, dset_name, data_dir):
         super().__init__(tpms, dset_name)
         self.solver = solver
         self.covs = covs
@@ -342,8 +342,8 @@ class GreedyMaxQueryModel(QueryModel):
 
         print("Loading/computing optimal initial solution")
         try:
-            self.curr_expected_value = np.load(os.path.join("saved_init_expected_usw", dset_name + ".npy"))
-            self.curr_alloc = np.load(os.path.join("saved_init_max_usw_soln", dset_name + ".npy"))
+            self.curr_expected_value = np.load(os.path.join(data_dir, "saved_init_expected_usw", dset_name + ".npy"))
+            self.curr_alloc = np.load(os.path.join(data_dir, "saved_init_max_usw_soln", dset_name + ".npy"))
         except FileNotFoundError:
             print("Recomputing")
             os.makedirs("saved_init_expected_usw", exist_ok=True)

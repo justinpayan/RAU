@@ -6,10 +6,10 @@ import os
 from queue import Queue
 
 
-def load_dset(dname):
-    tpms = np.load(os.path.join("data", dname, "scores.npy"))
-    covs = np.load(os.path.join("data", dname, "covs.npy"))
-    loads = np.load(os.path.join("data", dname, "loads.npy"))
+def load_dset(dname, data_dir="."):
+    tpms = np.load(os.path.join(data_dir, "data", dname, "scores.npy"))
+    covs = np.load(os.path.join(data_dir, "data", dname, "covs.npy"))
+    loads = np.load(os.path.join(data_dir, "data", dname, "loads.npy"))
 
     np.random.seed(31415)
 

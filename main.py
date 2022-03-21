@@ -38,8 +38,8 @@ def basic_baselines(dset_name, obj):
     print("Optimal %s: %.2f" % (obj, opt))
 
 
-def query_model(dset_name, obj, lamb, seed):
-    tpms, true_bids, covs, loads = load_dset(dset_name)
+def query_model(dset_name, obj, lamb, seed, data_dir):
+    tpms, true_bids, covs, loads = load_dset(dset_name, data_dir)
     if obj == "USW":
         # For now, don't use a solver, we can just expect to load the starting solutions from disk,
         # and at the end we will write out the v_tilde for input to gurobi separately.
@@ -48,11 +48,11 @@ def query_model(dset_name, obj, lamb, seed):
     else:
         print("USW is the only allowed objective right now")
         sys.exit(0)
-    query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name)
+    query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name, data_dir)
     # query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
     # query_model = SuperStarQueryModel(tpms, dset_name)
     # query_model = RandomQueryModel(tpms)
-    expected_obj, alloc, total_bids = run_experiment(dset_name, query_model, solver, seed, lamb)
+    expected_obj, alloc, total_bids = run_experiment(dset_name, query_model, solver, seed, lamb, data_dir)
 
     true_obj = np.sum(alloc * true_bids)
 
@@ -65,6 +65,7 @@ def query_model(dset_name, obj, lamb, seed):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dset_name", type=str)
+    parser.add_argument("--data_dir", type=str)
     parser.add_argument("--lamb", type=int, default=5)
     parser.add_argument("--seed", type=int, default=31415)
     parser.add_argument("--obj", type=str, default="USW")
@@ -75,10 +76,11 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     dset_name = args.dset_name
+    data_dir = args.data_dir
     lamb = args.lamb
     seed = args.seed
     obj = args.obj
 
-    query_model(dset_name, obj, lamb, seed)
+    query_model(dset_name, obj, lamb, seed, data_dir)
     # basic_baselines("cvpr", "USW")
 

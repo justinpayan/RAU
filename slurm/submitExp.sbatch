@@ -10,5 +10,6 @@
 #SBATCH --partition=defq
 
 DATASET=midl
+DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
 
-./submitExp.sh $DATASET
+./submitExp.sh $DATASET $DATA_DIR

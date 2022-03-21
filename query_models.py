@@ -467,7 +467,7 @@ class GreedyMaxQueryModel(QueryModel):
             for argument in [reviewer, max_query_val, self]:
                 list_of_copied_args.append(len(check_pool) * [argument])
 
-            expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args))
+            expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args), chunksize=1)
             for q, eev in zip(check_pool, expected_expected_values):
                 qry_values[q] = eev
 

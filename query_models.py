@@ -380,7 +380,7 @@ class GreedyMaxQueryModel(QueryModel):
         qry_values = {}
 
         for q in set(range(self.n)) - self.already_queried[reviewer]:
-            # print("Determine value of %d to %d" % (q, reviewer))
+            print("Determine value of %d to %d" % (q, reviewer), flush=True)
             # Compute the value of this paper. Return whichever has the best value.
             # If the paper is not in the current alloc to reviewer, then the alloc won't change if the reviewer bids no
             # Likewise, if the paper IS in the current alloc, the alloc won't change if the reviewer bids yes.
@@ -403,7 +403,7 @@ class GreedyMaxQueryModel(QueryModel):
 
                 expected_expected_value = self.v_tilde[reviewer, q] * updated_expected_value_if_yes + \
                                           (1 - self.v_tilde[reviewer, q]) * updated_expected_value_if_no
-                # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
+                print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
                 qry_values[q] = expected_expected_value
 
         # print(sorted(qry_values.items(), key=lambda x: -x[1])[:5], sorted(qry_values.items(), key=lambda x: -x[1])[-5:])

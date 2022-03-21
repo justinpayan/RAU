@@ -64,7 +64,7 @@ def query_model(dset_name, obj, lamb, seed, data_dir, num_procs):
 
 def final_solver_swarm(dset_name, obj, lamb, seed, data_dir):
     tpms, true_bids, covs, loads = load_dset(dset_name, data_dir)
-    v_tilde = np.load(os.path.join(data_dir, "v_tilde_%s" % dset_name))
+    v_tilde = np.load(os.path.join(data_dir, "v_tilde_%s.npy" % dset_name))
     if obj == "USW":
         solver = solve_usw_gurobi
     else:

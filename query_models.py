@@ -417,6 +417,8 @@ class GreedyMaxQueryModel(QueryModel):
     def check_expected_value(args, mqv):
         q, reviewer, query_model_object = args
 
+        print(q)
+        print(flush=True)
         # print(mqv.value)
         # print(flush=True)
 
@@ -437,7 +439,8 @@ class GreedyMaxQueryModel(QueryModel):
                                       (1 - query_model_object.v_tilde[reviewer, q]) * updated_expected_value_if_no
             # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
             if expected_expected_value > mqv.value:
-                mqv.value = expected_expected_value
+                with mqv.lock():
+                    mqv.value = expected_expected_value
             return expected_expected_value
 
     def get_query_parallel(self, reviewer, pool):

@@ -1,10 +1,12 @@
 import random
 from tqdm import tqdm
+import multiprocessing as mp
+
 
 from utils import *
 
 
-def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir):
+def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir, num_procs):
     tpms, true_bids, covs, loads = load_dset(dset_name, data_dir)
 
     print("%d reviewers, %d papers" % tpms.shape)
@@ -16,6 +18,8 @@ def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir):
 
     total_bids = 0
 
+    pool = mp.Pool(processes=num_procs)
+
     # Iterate through the reviewers.
     for r in tqdm(sorted(range(m), key=lambda x: random.random())):
         num_bids = rng.poisson(lamb)
@@ -24,7 +28,7 @@ def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir):
         # For each bid, pick the next paper to query based on the model
         for _ in range(num_bids):
             # query = query_model.get_queries_parallel(r)[0]
-            query = query_model.get_query(r)
+            query = query_model.get_query_parallel(r, pool)
             query_model.update(r, query, int(true_bids[r, query]))
             print("Next query for reviewer %d was %d" % (r, query))
             # for query in queries[:num_bids]:

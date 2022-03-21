@@ -52,7 +52,7 @@ def query_model(dset_name, obj, lamb, seed, data_dir, num_procs):
     # query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
     # query_model = SuperStarQueryModel(tpms, dset_name)
     # query_model = RandomQueryModel(tpms)
-    expected_obj, alloc, total_bids = run_experiment(dset_name, query_model, solver, seed, lamb, data_dir)
+    expected_obj, alloc, total_bids = run_experiment(dset_name, query_model, solver, seed, lamb, data_dir, num_procs)
 
     true_obj = np.sum(alloc * true_bids)
 

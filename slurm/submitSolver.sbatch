@@ -1,0 +1,16 @@
+#! /bin/bash
+
+#SBATCH --job-name=midl_maxusw_solver
+#SBATCH --output=/mnt/nfs/scratch1/jpayan/midl_max_usw_solver.out
+#SBATCH --error=/mnt/nfs/scratch1/jpayan/midl_max_usw_solver.err
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --nodelist=swarm082
+#SBATCH --mem=10G
+#SBATCH --time=00-02:00:00
+#SBATCH --partition=defq
+
+DATASET=midl
+DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
+
+./submitSolver.sh $DATASET $DATA_DIR

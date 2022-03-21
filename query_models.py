@@ -331,14 +331,15 @@ class VarianceReductionQueryModel(QueryModel):
 # TODO: This won't work for ESW. Need to change the allocation update model and the way I estimate the variance given
 # TODO: some allocation.
 class GreedyMaxQueryModel(QueryModel):
-    def __init__(self, tpms, covs, loads, solver, dset_name, data_dir):
+    def __init__(self, tpms, covs, loads, solver, dset_name, data_dir, num_procs):
         super().__init__(tpms, dset_name)
         self.solver = solver
         self.covs = covs
         self.loads = loads
-        self.num_procs = 20
+        self.num_procs = num_procs
         # A pool for running the updates in multiple threads
-        self.pool = mp.Pool(self.num_procs)
+        if num_procs > 1:
+            self.pool = mp.Pool(self.num_procs)
 
         print("Loading/computing optimal initial solution")
         try:
@@ -380,38 +381,41 @@ class GreedyMaxQueryModel(QueryModel):
                     self.residual_fwd_neighbors[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
 
     def get_query(self, reviewer):
-        qry_values = {}
+        if self.num_procs > 1:
+            return self.get_query_parallel(reviewer)
+        else:
+            qry_values = {}
 
-        for q in set(range(self.n)) - self.already_queried[reviewer]:
-            # print("Determine value of %d to %d" % (q, reviewer))
-            # Compute the value of this paper. Return whichever has the best value.
-            # If the paper is not in the current alloc to reviewer, then the alloc won't change if the reviewer bids no
-            # Likewise, if the paper IS in the current alloc, the alloc won't change if the reviewer bids yes.
+            for q in set(range(self.n)) - self.already_queried[reviewer]:
+                # print("Determine value of %d to %d" % (q, reviewer))
+                # Compute the value of this paper. Return whichever has the best value.
+                # If the paper is not in the current alloc to reviewer, then the alloc won't change if the reviewer bids no
+                # Likewise, if the paper IS in the current alloc, the alloc won't change if the reviewer bids yes.
 
-            # print("Reviewer %d is currently assigned %s" % (reviewer, np.where(self.curr_alloc[reviewer, :])))
-            # Estimate the improvement in expected value for both answers
-            if q in np.where(self.curr_alloc[reviewer, :])[0].tolist():
-                # print("Update if no")
-                updated_expected_value_if_no, _ = self._update_alloc(reviewer, q, 0)
-            else:
-                updated_expected_value_if_no = self.curr_expected_value
+                # print("Reviewer %d is currently assigned %s" % (reviewer, np.where(self.curr_alloc[reviewer, :])))
+                # Estimate the improvement in expected value for both answers
+                if q in np.where(self.curr_alloc[reviewer, :])[0].tolist():
+                    # print("Update if no")
+                    updated_expected_value_if_no, _ = self._update_alloc(reviewer, q, 0)
+                else:
+                    updated_expected_value_if_no = self.curr_expected_value
 
-            improvement_ub = self.v_tilde[reviewer, q] * (1 - self.v_tilde[reviewer, q]) + self.curr_expected_value
-            max_query_val = max(qry_values.values()) if qry_values else 0
+                improvement_ub = self.v_tilde[reviewer, q] * (1 - self.v_tilde[reviewer, q]) + self.curr_expected_value
+                max_query_val = max(qry_values.values()) if qry_values else 0
 
-            if qry_values and improvement_ub < max_query_val or math.isclose(improvement_ub, max_query_val):
-                qry_values[q] = self.curr_expected_value
-            else:
-                updated_expected_value_if_yes, _ = self._update_alloc(reviewer, q, 1)
+                if qry_values and improvement_ub < max_query_val or math.isclose(improvement_ub, max_query_val):
+                    qry_values[q] = self.curr_expected_value
+                else:
+                    updated_expected_value_if_yes, _ = self._update_alloc(reviewer, q, 1)
 
-                expected_expected_value = self.v_tilde[reviewer, q] * updated_expected_value_if_yes + \
-                                          (1 - self.v_tilde[reviewer, q]) * updated_expected_value_if_no
-                # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
-                qry_values[q] = expected_expected_value
+                    expected_expected_value = self.v_tilde[reviewer, q] * updated_expected_value_if_yes + \
+                                              (1 - self.v_tilde[reviewer, q]) * updated_expected_value_if_no
+                    # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
+                    qry_values[q] = expected_expected_value
 
-        # print(sorted(qry_values.items(), key=lambda x: -x[1])[:5], sorted(qry_values.items(), key=lambda x: -x[1])[-5:])
-        best_q = [x[0] for x in sorted(qry_values.items(), key=lambda x: -x[1])][0]
-        return best_q
+            # print(sorted(qry_values.items(), key=lambda x: -x[1])[:5], sorted(qry_values.items(), key=lambda x: -x[1])[-5:])
+            best_q = [x[0] for x in sorted(qry_values.items(), key=lambda x: -x[1])][0]
+            return best_q
 
     def get_query_parallel(self, reviewer):
         qry_values = {}

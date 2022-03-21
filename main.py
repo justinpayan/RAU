@@ -38,7 +38,7 @@ def basic_baselines(dset_name, obj):
     print("Optimal %s: %.2f" % (obj, opt))
 
 
-def query_model(dset_name, obj, lamb, seed, data_dir):
+def query_model(dset_name, obj, lamb, seed, data_dir, num_procs):
     tpms, true_bids, covs, loads = load_dset(dset_name, data_dir)
     if obj == "USW":
         # For now, don't use a solver, we can just expect to load the starting solutions from disk,
@@ -48,7 +48,7 @@ def query_model(dset_name, obj, lamb, seed, data_dir):
     else:
         print("USW is the only allowed objective right now")
         sys.exit(0)
-    query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name, data_dir)
+    query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name, data_dir, num_procs)
     # query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
     # query_model = SuperStarQueryModel(tpms, dset_name)
     # query_model = RandomQueryModel(tpms)
@@ -86,6 +86,7 @@ def parse_args():
     parser.add_argument("--lamb", type=int, default=5)
     parser.add_argument("--seed", type=int, default=31415)
     parser.add_argument("--obj", type=str, default="USW")
+    parser.add_argument("--num_procs", type=int, default=1)
 
     return parser.parse_args()
 
@@ -97,8 +98,9 @@ if __name__ == "__main__":
     lamb = args.lamb
     seed = args.seed
     obj = args.obj
+    num_procs=args.num_procs
 
-    # query_model(dset_name, obj, lamb, seed, data_dir)
+    # query_model(dset_name, obj, lamb, seed, data_dir, num_procs)
     # basic_baselines("cvpr", "USW")
     final_solver_swarm(dset_name, obj, lamb, seed, data_dir)
 

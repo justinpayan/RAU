@@ -100,7 +100,7 @@ if __name__ == "__main__":
     obj = args.obj
     num_procs=args.num_procs
 
-    # query_model(dset_name, obj, lamb, seed, data_dir, num_procs)
+    query_model(dset_name, obj, lamb, seed, data_dir, num_procs)
     # basic_baselines("cvpr", "USW")
-    final_solver_swarm(dset_name, obj, lamb, seed, data_dir)
+    # final_solver_swarm(dset_name, obj, lamb, seed, data_dir)
 

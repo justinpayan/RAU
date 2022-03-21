@@ -3,6 +3,7 @@ import random
 from copy import deepcopy
 from collections import defaultdict
 import math
+from multiprocessing import Value
 import numpy as np
 import os
 
@@ -434,43 +435,66 @@ class GreedyMaxQueryModel(QueryModel):
             return expected_expected_value
 
     def get_query_parallel(self, reviewer, pool):
-        papers_to_check = set(range(self.n)) - self.already_queried[reviewer]
+        papers_to_check = list(set(range(self.n)) - self.already_queried[reviewer])
 
-        qry_values = {}
+        # qry_values = {}
 
-        check_pool = []
-        for q in papers_to_check:
-            max_query_val = max(qry_values.values()) if qry_values else 0
+        # check_pool = []
+        # for q in papers_to_check:
+        max_query_val = Value('d', 0.0)
 
-            improvement_ub = self.v_tilde[reviewer, q] * (
-                        1 - self.v_tilde[reviewer, q]) + self.curr_expected_value
+        list_of_copied_args = [papers_to_check]
+        for argument in [reviewer, max_query_val, self]:
+            list_of_copied_args.append(len(papers_to_check) * [argument])
 
-            if improvement_ub > max_query_val or q in np.where(self.curr_alloc[reviewer, :])[0].tolist():
-                check_pool.append(q)
-            else:
-                qry_values[q] = self.curr_expected_value
+        expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args))
+        best_q = papers_to_check[np.argmax(expected_expected_values)]
+        return best_q
 
-            if len(check_pool) >= self.num_procs:
-                # Run the parallel processes which will check the expected value of these queries.
-                list_of_copied_args = [check_pool]
-                for argument in [reviewer, max_query_val, self]:
-                    list_of_copied_args.append(len(check_pool) * [argument])
+        # papers_to_check = set(range(self.n)) - self.already_queried[reviewer]
+        #
+        # qry_values = {}
+        #
+        # check_pool = []
+        # for q in papers_to_check:
+        #     max_query_val = max(qry_values.values()) if qry_values else 0
+        #
+        #     improvement_ub = self.v_tilde[reviewer, q] * (
+        #                 1 - self.v_tilde[reviewer, q]) + self.curr_expected_value
+        #
+        #     if improvement_ub > max_query_val or q in np.where(self.curr_alloc[reviewer, :])[0].tolist():
+        #         check_pool.append(q)
+        #     else:
+        #         qry_values[q] = self.curr_expected_value
+        #
+        #     if len(check_pool) >= self.num_procs:
+        #         # Run the parallel processes which will check the expected value of these queries.
+        #         list_of_copied_args = [check_pool]
+        #         for argument in [reviewer, max_query_val, self]:
+        #             list_of_copied_args.append(len(check_pool) * [argument])
+        #
+        #         expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args))
+        #         for q, eev in zip(check_pool, expected_expected_values):
+        #             qry_values[q] = eev
+        #         check_pool = []
+        #         print("We have checked %d papers so far" % len(qry_values), flush=True)
+        #
+        # if len(check_pool) >= self.num_procs:
+        #     # Run the parallel processes which will check the expected value of these queries.
+        #     list_of_copied_args = [check_pool]
+        #     for argument in [reviewer, max_query_val, self]:
+        #         list_of_copied_args.append(len(check_pool) * [argument])
+        #
+        #     expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args), chunksize=1)
+        #     for q, eev in zip(check_pool, expected_expected_values):
+        #         qry_values[q] = eev
+        # best_q = [x[0] for x in sorted(qry_values.items(), key=lambda x: -x[1])][0]
+        # return best_q
 
-                expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args))
-                for q, eev in zip(check_pool, expected_expected_values):
-                    qry_values[q] = eev
-                check_pool = []
-                print("We have checked %d papers so far" % len(qry_values), flush=True)
 
-        if len(check_pool) >= self.num_procs:
-            # Run the parallel processes which will check the expected value of these queries.
-            list_of_copied_args = [check_pool]
-            for argument in [reviewer, max_query_val, self]:
-                list_of_copied_args.append(len(check_pool) * [argument])
 
-            expected_expected_values = pool.map(GreedyMaxQueryModel.check_expected_value, zip(*list_of_copied_args), chunksize=1)
-            for q, eev in zip(check_pool, expected_expected_values):
-                qry_values[q] = eev
+
+
 
 
         # while len(papers_to_check):
@@ -488,8 +512,8 @@ class GreedyMaxQueryModel(QueryModel):
         #     for q, eev in zip(next_to_check, expected_expected_values):
         #         qry_values[q] = eev
 
-        best_q = [x[0] for x in sorted(qry_values.items(), key=lambda x: -x[1])][0]
-        return best_q
+        # best_q = [x[0] for x in sorted(qry_values.items(), key=lambda x: -x[1])][0]
+        # return best_q
 
     # def get_queries(self, reviewer):
     #     qry_values = {}

@@ -4,13 +4,12 @@
 #SBATCH --output=/mnt/nfs/scratch1/jpayan/cvpr_max_usw.out
 #SBATCH --error=/mnt/nfs/scratch1/jpayan/cvpr_max_usw.err
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=20
+#SBATCH --cpus-per-task=10
 #SBATCH --ntasks=1
-#SBATCH --mem-per-cpu=4G
 #SBATCH --time=06-00:00:00
 #SBATCH --partition=longq
 
-NUM_PROCS=20
+NUM_PROCS=10
 
 DATASET=cvpr
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding

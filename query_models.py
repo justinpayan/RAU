@@ -417,8 +417,8 @@ class GreedyMaxQueryModel(QueryModel):
     def check_expected_value(args, mqv):
         q, reviewer, query_model_object = args
 
-        print(mqv.value)
-        print(flush=True)
+        # print(mqv.value)
+        # print(flush=True)
 
         if q in np.where(query_model_object.curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")
@@ -456,7 +456,7 @@ class GreedyMaxQueryModel(QueryModel):
         for argument in [reviewer, self]:
             list_of_copied_args.append(len(papers_to_check) * [argument])
 
-        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args))
+        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 1)
         best_q = papers_to_check[np.argmax(expected_expected_values)]
         return best_q
 

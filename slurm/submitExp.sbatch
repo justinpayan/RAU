@@ -12,10 +12,6 @@
 
 NUM_PROCS=20
 
-export MKL_NUM_THREADS=${NUM_PROCS}
-export OPENBLAS_NUM_THREADS=${NUM_PROCS}
-export OMP_NUM_THREADS=${NUM_PROCS}
-
 DATASET=cvpr
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
 

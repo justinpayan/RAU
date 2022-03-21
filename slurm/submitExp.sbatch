@@ -1,21 +1,21 @@
 #! /bin/bash
 
-#SBATCH --job-name=midl_maxusw
-#SBATCH --output=/mnt/nfs/scratch1/jpayan/midl_max_usw.out
-#SBATCH --error=/mnt/nfs/scratch1/jpayan/midl_max_usw.err
+#SBATCH --job-name=cvpr_maxusw
+#SBATCH --output=/mnt/nfs/scratch1/jpayan/cvpr_max_usw.out
+#SBATCH --error=/mnt/nfs/scratch1/jpayan/cvpr_max_usw.err
 #SBATCH --nodes=1
-#SBATCH --ntasks=40
+#SBATCH --ntasks=20
 #SBATCH --mem=40G
-#SBATCH --time=00-02:00:00
-#SBATCH --partition=defq
+#SBATCH --time=06-00:00:00
+#SBATCH --partition=longq
 
-NUM_PROCS=40
+NUM_PROCS=20
 
 export MKL_NUM_THREADS=${NUM_PROCS}
 export OPENBLAS_NUM_THREADS=${NUM_PROCS}
 export OMP_NUM_THREADS=${NUM_PROCS}
 
-DATASET=midl
+DATASET=cvpr
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
 
 ./submitExp.sh $DATASET $DATA_DIR ${NUM_PROCS}

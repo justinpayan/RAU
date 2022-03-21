@@ -4,12 +4,12 @@
 #SBATCH --output=/mnt/nfs/scratch1/jpayan/midl_max_usw.out
 #SBATCH --error=/mnt/nfs/scratch1/jpayan/midl_max_usw.err
 #SBATCH --nodes=1
-#SBATCH --ntasks=20
-#SBATCH --mem=10G
+#SBATCH --ntasks=40
+#SBATCH --mem=40G
 #SBATCH --time=00-02:00:00
 #SBATCH --partition=defq
 
-NUM_PROCS=20
+NUM_PROCS=40
 
 export MKL_NUM_THREADS=${NUM_PROCS}
 export OPENBLAS_NUM_THREADS=${NUM_PROCS}

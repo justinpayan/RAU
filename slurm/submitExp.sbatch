@@ -1,8 +1,8 @@
 #! /bin/bash
 
-#SBATCH --job-name=cvpr_maxusw
-#SBATCH --output=/mnt/nfs/scratch1/jpayan/cvpr_max_usw.out
-#SBATCH --error=/mnt/nfs/scratch1/jpayan/cvpr_max_usw.err
+#SBATCH --job-name=cvpr_maxusw_2
+#SBATCH --output=/mnt/nfs/scratch1/jpayan/cvpr_max_usw_2.out
+#SBATCH --error=/mnt/nfs/scratch1/jpayan/cvpr_max_usw_2.err
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
 #SBATCH --ntasks=1

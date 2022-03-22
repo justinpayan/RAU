@@ -7,6 +7,7 @@ from multiprocessing import Value, Manager
 import functools
 import numpy as np
 import os
+import time
 
 from utils import spfa, spfa_simple, super_algorithm
 
@@ -797,7 +798,10 @@ class GreedyMaxQueryModel(QueryModel):
             res_copy[r][query + query_model_object.m] = -response
 
         cycle = True
+        start_time = time.time()
+        num_iters = 0
         while cycle:
+            num_iters += 1
             cycle = spfa(res_copy)
 
             if cycle is not None:
@@ -849,6 +853,9 @@ class GreedyMaxQueryModel(QueryModel):
 
                     # Move to the next REVIEWER... not the next vertex in the cycle
                     ctr += 2
+
+        total_time = time.time() - start_time
+        print("%d iters, %s s" % (num_iters, total_time))
 
         # Ok, so now this should be the best allocation. Check the new value of the expected USW, and make sure it
         # exceeds the value from applying the previous allocation with the new v_tilde.

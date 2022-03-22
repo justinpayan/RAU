@@ -416,7 +416,7 @@ class GreedyMaxQueryModel(QueryModel):
 
     @staticmethod
     def check_expected_value(args, mqv):
-        # start_time = time.time()
+        start_time = time.time()
         q, reviewer, query_model_object = args
 
         # print(q)
@@ -433,6 +433,7 @@ class GreedyMaxQueryModel(QueryModel):
         improvement_ub = query_model_object.v_tilde[reviewer, q] * (1 - query_model_object.v_tilde[reviewer, q]) + query_model_object.curr_expected_value
 
         if improvement_ub < mqv.value or math.isclose(improvement_ub, mqv.value):
+            print("check_expected_values: %s" % (time.time() - start_time))
             return query_model_object.curr_expected_value
         else:
             updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, query_model_object)
@@ -442,6 +443,7 @@ class GreedyMaxQueryModel(QueryModel):
             # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
             if expected_expected_value > mqv.value:
                 mqv.value = expected_expected_value
+            print("check_expected_values: %s" % (time.time() - start_time))
             return expected_expected_value
 
     def get_query_parallel(self, reviewer, pool):
@@ -454,7 +456,7 @@ class GreedyMaxQueryModel(QueryModel):
 
         # max_query_val = Value('d', 0.0, lock=True)
 
-        # start_time = time.time()
+        start_time = time.time()
         proc_manager = Manager()
         max_query_val = proc_manager.Value('d', 0.0)
 
@@ -464,7 +466,7 @@ class GreedyMaxQueryModel(QueryModel):
 
         expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 300)
         # print("Average check_expected_value time: %s" % np.mean(times))
-        # print("Total time: %s" % (time.time() - start_time))
+        print("Total time in check_expected_values: %s" % (time.time() - start_time))
         indices = np.argsort(expected_expected_values)[::-1].tolist()
         return [papers_to_check[i] for i in indices]
         # best_q = papers_to_check[np.argmax(expected_expected_values)]

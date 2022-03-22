@@ -779,7 +779,7 @@ class GreedyMaxQueryModel(QueryModel):
         # print("check value if paper %d for rev %d is %d" % (query, r, response))
 
         if query_model_object.curr_alloc[r, query] < .1 and response == 0:
-            return query_model_object.curr_expected_value, query_model_object.curr_alloc
+            return query_model_object.curr_expected_value
 
         # Otherwise, we need to repeatedly check for augmenting paths in the residual graph
         # Honestly, I should probably maintain the residual graph at all times

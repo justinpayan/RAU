@@ -433,7 +433,7 @@ class GreedyMaxQueryModel(QueryModel):
         improvement_ub = query_model_object.v_tilde[reviewer, q] * (1 - query_model_object.v_tilde[reviewer, q]) + query_model_object.curr_expected_value
 
         if improvement_ub < mqv.value or math.isclose(improvement_ub, mqv.value):
-            print("check_expected_values: %s" % (time.time() - start_time))
+            print("check_expected_values: %s" % (time.time() - start_time), flush=True)
             return query_model_object.curr_expected_value
         else:
             updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, query_model_object)
@@ -443,7 +443,7 @@ class GreedyMaxQueryModel(QueryModel):
             # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
             if expected_expected_value > mqv.value:
                 mqv.value = expected_expected_value
-            print("check_expected_values: %s" % (time.time() - start_time))
+            print("check_expected_values: %s" % (time.time() - start_time), flush=True)
             return expected_expected_value
 
     def get_query_parallel(self, reviewer, pool):

@@ -416,6 +416,7 @@ class GreedyMaxQueryModel(QueryModel):
 
     @staticmethod
     def check_expected_value(args, mqv):
+        start_time = time.time()
         q, reviewer, query_model_object = args
 
         # print(q)
@@ -441,7 +442,7 @@ class GreedyMaxQueryModel(QueryModel):
             # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
             if expected_expected_value > mqv.value:
                 mqv.value = expected_expected_value
-            return expected_expected_value
+            return expected_expected_value, time.time() - start_time
 
     def get_query_parallel(self, reviewer, pool):
         papers_to_check = list(set(range(self.n)) - self.already_queried[reviewer])
@@ -452,6 +453,8 @@ class GreedyMaxQueryModel(QueryModel):
         # for q in papers_to_check:
 
         # max_query_val = Value('d', 0.0, lock=True)
+
+        start_time = time.time()
         proc_manager = Manager()
         max_query_val = proc_manager.Value('d', 0.0)
 
@@ -459,7 +462,9 @@ class GreedyMaxQueryModel(QueryModel):
         for argument in [reviewer, self]:
             list_of_copied_args.append(len(papers_to_check) * [argument])
 
-        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 300)
+        expected_expected_values, times = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 300)
+        print("Average check_expected_value time: %s" % np.mean(times))
+        print("Total time: %s" % (time.time() - start_time))
         best_q = papers_to_check[np.argmax(expected_expected_values)]
         return best_q
 
@@ -701,8 +706,6 @@ class GreedyMaxQueryModel(QueryModel):
                         # Reverse the edge and negate its weight
                         res_copy[curr_rev][paper_to_drop + self.m] = -res_copy[paper_to_drop + self.m][curr_rev]
                         del res_copy[paper_to_drop + self.m][curr_rev]
-
-
 
                     # Update the residual graph if we have dropped the last paper
                     # We need to make it so that curr_rev can't receive the dummy paper anymore.

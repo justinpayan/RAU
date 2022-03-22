@@ -464,7 +464,7 @@ class GreedyMaxQueryModel(QueryModel):
         for argument in [reviewer, self]:
             list_of_copied_args.append(len(papers_to_check) * [argument])
 
-        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 40)
+        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 500)
         # print("Average check_expected_value time: %s" % np.mean(times))
         print("Total time in check_expected_values: %s" % (time.time() - start_time))
         indices = np.argsort(expected_expected_values)[::-1].tolist()
@@ -678,12 +678,16 @@ class GreedyMaxQueryModel(QueryModel):
         #     print("%d: %s" % (rev, np.where(self.curr_alloc[rev, :])[0].tolist()))
 
         cycle = True
+        src_set = {r, query}
+
         while cycle:
             # print("SPFA start")
-            cycle = spfa(res_copy)
+            # cycle = spfa(res_copy)
+            cycle = spfa_simple(res_copy, src_set)
             # print(cycle)
 
             if cycle is not None:
+                src_set |= set(cycle)
                 # for i in cycle:
                 #     print(i)
                 #     print(res_copy[i])
@@ -808,14 +812,15 @@ class GreedyMaxQueryModel(QueryModel):
             res_copy[r][query + query_model_object.m] = -response
 
         cycle = True
-        start_time = time.time()
         num_iters = 0
+        src_set = {r, query}
+
         while cycle and num_iters < 2:
             num_iters += 1
-            cycle = spfa(res_copy)
+            cycle = spfa_simple(res_copy, src_set)
 
             if cycle is not None:
-
+                src_set |= set(cycle)
                 # The cycle goes backward in the residual graph. Thus, we need to assign the i-1'th paper to the i'th
                 # reviewer, and unassign the i+1'th paper.
                 ctr = 0 if cycle[0] < query_model_object.m else 1

@@ -58,7 +58,7 @@ def spfa(fwd_adj_list):
     return None
 
 
-def spfa_simple(fwd_adj_list, src_rev):
+def spfa_simple(fwd_adj_list, src_set):
     dis = [0] * len(fwd_adj_list)
     pre = [-1] * len(fwd_adj_list)
     vertex_queue = Queue()
@@ -66,8 +66,9 @@ def spfa_simple(fwd_adj_list, src_rev):
     # for v in range(len(fwd_adj_list)):
     #     vertex_queue.put(v)
     #     vertex_queue_set.add(v)
-    vertex_queue.put(src_rev)
-    vertex_queue_set.add(src_rev)
+    for v in src_set:
+        vertex_queue.put(v)
+        vertex_queue_set.add(v)
 
     while vertex_queue.qsize():
         u = vertex_queue.get()
@@ -76,7 +77,7 @@ def spfa_simple(fwd_adj_list, src_rev):
             if dis[u] + fwd_adj_list[u][v] < dis[v] and not math.isclose(dis[u] + fwd_adj_list[u][v], dis[v]):
                 pre[v] = u
                 dis[v] = dis[u] + fwd_adj_list[u][v]
-                if v == src_rev:
+                if v in src_set:
                     cyc = detect_cycle(pre)
                     if cyc:
                         return cyc
@@ -88,7 +89,7 @@ def spfa_simple(fwd_adj_list, src_rev):
                 if v not in vertex_queue_set:
                     vertex_queue.put(v)
                     vertex_queue_set.add(v)
-    if v == src_rev:
+    if v in src_set:
         cyc = detect_cycle(pre)
         if cyc:
             return cyc

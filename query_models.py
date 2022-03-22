@@ -458,7 +458,7 @@ class GreedyMaxQueryModel(QueryModel):
         for argument in [reviewer, self]:
             list_of_copied_args.append(len(papers_to_check) * [argument])
 
-        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 100)
+        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 300)
         best_q = papers_to_check[np.argmax(expected_expected_values)]
         return best_q
 

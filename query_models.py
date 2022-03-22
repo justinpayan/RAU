@@ -439,7 +439,7 @@ class GreedyMaxQueryModel(QueryModel):
                                       (1 - query_model_object.v_tilde[reviewer, q]) * updated_expected_value_if_no
             # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
             if expected_expected_value > mqv.value:
-                with mqv.lock():
+                with mqv.get_lock():
                     mqv.value = expected_expected_value
             return expected_expected_value
 

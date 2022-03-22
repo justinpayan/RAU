@@ -447,7 +447,7 @@ class GreedyMaxQueryModel(QueryModel):
             return expected_expected_value
 
     def get_query_parallel(self, reviewer, pool):
-        papers_to_check = sorted(list(set(range(self.n)) - self.already_queried[reviewer]), key=random.random)
+        papers_to_check = sorted(list(set(range(self.n)) - self.already_queried[reviewer]), key=lambda x: random.random())
 
         # qry_values = {}
 

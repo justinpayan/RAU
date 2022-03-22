@@ -447,7 +447,7 @@ class GreedyMaxQueryModel(QueryModel):
             return expected_expected_value
 
     def get_query_parallel(self, reviewer, pool):
-        papers_to_check = list(set(range(self.n)) - self.already_queried[reviewer])
+        papers_to_check = sorted(list(set(range(self.n)) - self.already_queried[reviewer]), key=random.random)
 
         # qry_values = {}
 
@@ -464,7 +464,7 @@ class GreedyMaxQueryModel(QueryModel):
         for argument in [reviewer, self]:
             list_of_copied_args.append(len(papers_to_check) * [argument])
 
-        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 300)
+        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 40)
         # print("Average check_expected_value time: %s" % np.mean(times))
         print("Total time in check_expected_values: %s" % (time.time() - start_time))
         indices = np.argsort(expected_expected_values)[::-1].tolist()

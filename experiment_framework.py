@@ -28,11 +28,14 @@ def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir, num_pro
         total_bids += num_bids
 
         # For each bid, pick the next paper to query based on the model
+        updated = True
         for _ in range(num_bids):
             # query = query_model.get_queries_parallel(r)[0]
-            query = query_model.get_query_parallel(r, pool)
+            if updated:
+                queries = query_model.get_query_parallel(r, pool)
             # query = query_model.get_query(r)
-            query_model.update(r, query, int(true_bids[r, query]))
+            query = queries.pop(0)
+            updated = query_model.update(r, query, int(true_bids[r, query]))
             print("Next query for reviewer %d was %d" % (r, query))
             # for query in queries[:num_bids]:
             #     query_model.update(r, query, int(true_bids[r, query]))

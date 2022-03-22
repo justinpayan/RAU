@@ -417,8 +417,8 @@ class GreedyMaxQueryModel(QueryModel):
     def check_expected_value(args, mqv):
         q, reviewer, query_model_object = args
 
-        print(q)
-        print(flush=True)
+        # print(q)
+        # print(flush=True)
         # print(mqv.value)
         # print(flush=True)
 

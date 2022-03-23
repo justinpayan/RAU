@@ -906,6 +906,10 @@ class GreedyMaxQueryModel(QueryModel):
             np.save(os.path.join("saved_init_expected_usw", dset_name), self.curr_expected_value)
             np.save(os.path.join("saved_init_max_usw_soln", dset_name), self.curr_alloc)
 
+        self.shared_max_query_value = self.proc_manager.Value('d', 0.0)
+        self.shared_curr_alloc = self.proc_manager.Array(ctypes.c_double, np.ravel(self.curr_alloc).tolist())
+        self.shared_v_tilde = self.proc_manager.Array(ctypes.c_double, np.ravel(self.v_tilde).tolist())
+        self.shared_loads = self.proc_manager.Array(ctypes.c_double, self.loads.tolist())
 
         # Bipartite graph, with reviewers on left side, papers on right. There is a dummy paper which we will
         # assign to all reviewers with remaining review load.
@@ -1017,17 +1021,14 @@ class GreedyMaxQueryModel(QueryModel):
                                l * [self.m],
                                l * [self.n]]
 
-        shared_max_query_value = Value('d', 0.0)
-        shared_curr_alloc = Array(ctypes.c_double, np.ravel(self.curr_alloc).tolist())
-        shared_v_tilde = Array(ctypes.c_double, np.ravel(self.v_tilde).tolist())
-        shared_loads = Array(ctypes.c_double, self.loads.tolist())
+        self.shared_max_query_value.value = 0.0
 
         expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value,
-                                                              mqv=shared_max_query_value,
+                                                              mqv=self.shared_max_query_value,
                                                               residual_fwd_neighbors=self.residual_fwd_neighbors,
-                                                              curr_alloc=shared_curr_alloc,
-                                                              v_tilde=shared_v_tilde,
-                                                              loads=shared_loads),
+                                                              curr_alloc=self.shared_curr_alloc,
+                                                              v_tilde=self.shared_v_tilde,
+                                                              loads=self.shared_loads),
                                             zip(*list_of_copied_args), 300)
         # print("Average check_expected_value time: %s" % np.mean(times))
         print("Total time in check_expected_values: %s" % (time.time() - start_time))
@@ -1039,6 +1040,10 @@ class GreedyMaxQueryModel(QueryModel):
         old_expected_value = self.curr_expected_value
         self.curr_expected_value, self.curr_alloc = self._update_alloc(r, query, response)
         updated = math.isclose(old_expected_value, self.curr_expected_value)
+
+        if updated:
+            self.shared_curr_alloc = self.proc_manager.Array(ctypes.c_double, np.ravel(self.curr_alloc).tolist())
+            self.shared_v_tilde = self.proc_manager.Array(ctypes.c_double, np.ravel(self.v_tilde).tolist())
 
         self.residual_fwd_neighbors = self.proc_manager.dict()
         for r in range(self.m):

@@ -882,7 +882,7 @@ class VarianceReductionQueryModel(QueryModel):
 
 proc_manager = Manager()
 shared_max_query_value = proc_manager.Value('d', 0.0)
-local_residual_fwd_neighbors = proc_manager.dict()
+local_residual_fwd_neighbors = dict()
 buffers = {}
 
 def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
@@ -1228,7 +1228,9 @@ class GreedyMaxQueryModel(QueryModel):
         if curr_alloc[r, query] < .1 and response == 0:
             return curr_expected_value
 
-        res_copy = deepcopy(local_residual_fwd_neighbors)
+        touched_nodes = set()
+
+        res_copy = local_residual_fwd_neighbors
 
         # Otherwise, we need to repeatedly check for augmenting paths in the residual graph
         # Honestly, I should probably maintain the residual graph at all times
@@ -1250,14 +1252,16 @@ class GreedyMaxQueryModel(QueryModel):
         # Use the shortest path faster algorithm to find negative weight cycles, until there aren't any.
         # https://konaeakira.github.io/posts/using-the-shortest-path-faster-algorithm-to-find-negative-cycles.html
 
-        updated_alloc = curr_alloc
+        updated_alloc = curr_alloc.copy()
 
         if curr_alloc[r, query] > .5:
             # update the weight of the edge from query to r (should be positive).
             res_copy[query + m][r] = response
+            touched_nodes.add(query+m)
         else:
             # update the weight of the edge from r to query (should be negative).
             res_copy[r][query + m] = -response
+            touched_nodes.add(r)
 
         cycle = True
         num_iters = 0
@@ -1268,7 +1272,10 @@ class GreedyMaxQueryModel(QueryModel):
             cycle = spfa_simple(res_copy, src_set)
 
             if cycle is not None:
-                src_set |= set(cycle)
+                cycle_set = set(cycle)
+                src_set |= cycle_set
+                touched_nodes |= cycle_set
+
                 # The cycle goes backward in the residual graph. Thus, we need to assign the i-1'th paper to the i'th
                 # reviewer, and unassign the i+1'th paper.
                 ctr = 0 if cycle[0] < m else 1
@@ -1325,5 +1332,30 @@ class GreedyMaxQueryModel(QueryModel):
         updated_expected_value = np.sum(updated_alloc * v_tilde) - \
             v_tilde[r, query] * updated_alloc[r, query] + \
             response * updated_alloc[r, query]
+
+        # Fix the residual forward neighbors so it is like it was before.
+        for node in touched_nodes:
+            if node < m:
+                # It's a rev
+                local_residual_fwd_neighbors[node] = dict()
+                num_papers = np.sum(curr_alloc[node, :])
+                if num_papers > 0.1:
+                    local_residual_fwd_neighbors[node][n + m] = 0
+                elif (n+m) in local_residual_fwd_neighbors[node]:
+                    del local_residual_fwd_neighbors[node][n + m]
+                if num_papers < loads[node] - .1:
+                    local_residual_fwd_neighbors[n + m][node] = 0
+                elif node in local_residual_fwd_neighbors[n + m]:
+                    del local_residual_fwd_neighbors[n + m][node]
+
+                for paper in range(n):
+                    if curr_alloc[node, paper] > .5:
+                        local_residual_fwd_neighbors[paper + m][node] = v_tilde[node, paper]
+                        if (paper+m) in local_residual_fwd_neighbors[node]:
+                            del local_residual_fwd_neighbors[node][paper+m]
+                    else:
+                        local_residual_fwd_neighbors[node][paper + m] = -v_tilde[node, paper]
+                        if node in local_residual_fwd_neighbors[paper+m]:
+                            del local_residual_fwd_neighbors[paper+m][node]
 
         return updated_expected_value

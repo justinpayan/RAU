@@ -916,7 +916,7 @@ def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
                 local_residual_fwd_neighbors[paper + m][reviewer] = local_v_tilde[reviewer, paper]
             else:
                 local_residual_fwd_neighbors[reviewer][paper + m] = -local_v_tilde[reviewer, paper]
-    print("Time taken in creating rfn graph per worker: %s s" % (time.time() - st))
+    print("Time taken in creating rfn graph per worker: %s s" % (time.time() - st), flush=True)
 
 # TODO: This won't work for ESW. Need to change the allocation update model and the way I estimate the variance given
 # TODO: some allocation.
@@ -1051,7 +1051,7 @@ class GreedyMaxQueryModel(QueryModel):
                                                 zip(*list_of_copied_args), 300)
             expected_expected_values = [x[0] for x in expected_expected_values_and_times]
             times = [x[1] for x in expected_expected_values_and_times]
-            print("Total time spent inside check_expected_values: %s" % np.mean(times))
+            print("Total time spent inside check_expected_values: %s" % np.sum(times))
         # print("Average check_expected_value time: %s" % np.mean(times))
         print("Total time in starting and running check_expected_values: %s" % (time.time() - start_time))
         indices = np.argsort(expected_expected_values)[::-1].tolist()

@@ -983,9 +983,9 @@ class GreedyMaxQueryModel(QueryModel):
         # print(flush=True)
 
         # TODO: Need to convert back from the shared memory version of the array to a numpy array for each.
-        local_curr_alloc = np.frombuffer(curr_alloc.get_obj()).reshape(m, n)
-        local_v_tilde = np.frombuffer(v_tilde.get_obj()).reshape(m, n)
-        local_loads = np.frombuffer(loads.get_obj())
+        local_curr_alloc = np.frombuffer(curr_alloc).reshape(m, n)
+        local_v_tilde = np.frombuffer(v_tilde).reshape(m, n)
+        local_loads = np.frombuffer(loads)
 
         if q in np.where(local_curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")

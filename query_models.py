@@ -897,7 +897,6 @@ def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
     local_v_tilde = np.frombuffer(raw_v_tilde).reshape((m, n), order='C')
     local_loads = np.frombuffer(raw_loads)
 
-    local_residual_fwd_neighbors = dict()
     for r in range(m):
         local_residual_fwd_neighbors[r] = dict()
     for p in range(n + 1):

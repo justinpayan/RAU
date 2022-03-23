@@ -880,7 +880,9 @@ class VarianceReductionQueryModel(QueryModel):
 #
 #         return updated_expected_value
 
-local_residual_fwd_neighbors = dict()
+proc_manager = Manager()
+shared_max_query_value = proc_manager.Value('d', 0.0)
+local_residual_fwd_neighbors = proc_manager.dict()
 buffers = {}
 
 def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
@@ -923,8 +925,6 @@ class GreedyMaxQueryModel(QueryModel):
         self.loads = loads
         self.num_procs = num_procs
 
-        self.proc_manager = Manager()
-
         print("Loading/computing optimal initial solution")
         try:
             self.curr_expected_value = np.load(os.path.join(data_dir, "saved_init_expected_usw", dset_name + ".npy"))
@@ -937,9 +937,6 @@ class GreedyMaxQueryModel(QueryModel):
             self.curr_expected_value, self.curr_alloc = self.solver(self.v_tilde, self.covs, self.loads)
             np.save(os.path.join("saved_init_expected_usw", dset_name), self.curr_expected_value)
             np.save(os.path.join("saved_init_max_usw_soln", dset_name), self.curr_alloc)
-
-        self.shared_max_query_value = self.proc_manager.Value('d', 0.0)
-
 
     def get_query(self, reviewer):
         qry_values = {}
@@ -1025,7 +1022,7 @@ class GreedyMaxQueryModel(QueryModel):
                                l * [self.m],
                                l * [self.n]]
 
-        self.shared_max_query_value.value = 0.0
+        shared_max_query_value.value = 0.0
 
         raw_curr_alloc = RawArray('d', self.curr_alloc.shape[0] * self.curr_alloc.shape[1])
         curr_alloc_np = np.frombuffer(raw_curr_alloc).reshape(self.curr_alloc.shape, order='C')
@@ -1047,7 +1044,7 @@ class GreedyMaxQueryModel(QueryModel):
 
         with Pool(processes=self.num_procs, initializer=init_worker, initargs=(self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads)) as pool:
             expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value,
-                                                mqv=self.shared_max_query_value),
+                                                mqv=shared_max_query_value),
                                                 zip(*list_of_copied_args), 300)
         # print("Average check_expected_value time: %s" % np.mean(times))
         print("Total time in check_expected_values: %s" % (time.time() - start_time))

@@ -882,11 +882,6 @@ class VarianceReductionQueryModel(QueryModel):
 
 local_residual_fwd_neighbors = dict()
 buffers = {}
-# curr_alloc_buffer = None
-# v_tilde_buffer = None
-# loads_buffer = None
-
-# (self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads)
 
 def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
     # curr_alloc_buffer = raw_curr_alloc
@@ -896,8 +891,8 @@ def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
     buffers['v_tilde'] = raw_v_tilde
     buffers['loads'] = raw_loads
 
-    local_curr_alloc = np.frombuffer(raw_curr_alloc).reshape(m, n)
-    local_v_tilde = np.frombuffer(raw_v_tilde).reshape(m, n)
+    local_curr_alloc = np.frombuffer(raw_curr_alloc).reshape((m, n), order='C')
+    local_v_tilde = np.frombuffer(raw_v_tilde).reshape((m, n), order='C')
     local_loads = np.frombuffer(raw_loads)
 
     local_residual_fwd_neighbors = dict()
@@ -942,61 +937,9 @@ class GreedyMaxQueryModel(QueryModel):
             self.curr_expected_value, self.curr_alloc = self.solver(self.v_tilde, self.covs, self.loads)
             np.save(os.path.join("saved_init_expected_usw", dset_name), self.curr_expected_value)
             np.save(os.path.join("saved_init_max_usw_soln", dset_name), self.curr_alloc)
-        # var_dict = {}
-
-        # def init_worker(X, X_shape):
-            # Using a dictionary is not strictly necessary. You can also
-            # use global variables.
-            # var_dict['X'] = X
-            # var_dict['X_shape'] = X_shape
-        # data = np.random.randn(*X_shape)
-        # X = RawArray('d', X_shape[0] * X_shape[1])
-        # Wrap X as an numpy array so we can easily manipulates its data.
-        # X_np = np.frombuffer(X, dtype=np.float64).reshape(X_shape)
-        # Copy data to our shared array.
-        # np.copyto(X_np, data)
 
         self.shared_max_query_value = self.proc_manager.Value('d', 0.0)
 
-        # self.shared_curr_alloc = RawArray('d', self.curr_alloc.shape[0]*self.curr_alloc.shape[1])
-        # self.shared_curr_alloc_np = np.frombuffer(self.shared_curr_alloc, dtype=np.float64).reshape(self.curr_alloc.shape)
-        # np.copyto(self.shared_curr_alloc_np, self.shared_curr_alloc)
-        #
-        # self.shared_v_tilde = RawArray('d', self.v_tilde.shape[0] * self.v_tilde.shape[1])
-        # self.shared_v_tilde_np = np.frombuffer(self.shared_v_tilde, dtype=np.float64).reshape(
-        #     self.v_tilde.shape)
-        # np.copyto(self.shared_v_tilde_np, self.shared_v_tilde)
-        #
-        # self.shared_loads = RawArray('d', self.loads.shape[0])
-        # self.shared_loads_np = np.frombuffer(self.shared_loads, dtype=np.float64)
-        # np.copyto(self.shared_loads_np, self.shared_loads)
-
-        # Bipartite graph, with reviewers on left side, papers on right. There is a dummy paper which we will
-        # assign to all reviewers with remaining review load.
-        # We need to have edges with positive v_tilde from paper j to reviewer i when j is assigned to i.
-        # Any unassigned papers have edges from reviewer i to paper j with negative edge weight.
-        # We draw an edge TO the dummy paper when a reviewer has been assigned at least one paper.
-        # We draw an edge FROM the dummy paper when a reviewer still has extra capacity.
-        # We will search for negative weight cycles in this thing.
-        # TODO: once this whole thing is implemented, I should also make sure that the suggested updates are valid.
-        # print("Setting up residual graph")
-        # self.residual_fwd_neighbors = self.proc_manager.dict()
-        # for r in range(self.m):
-        #     self.residual_fwd_neighbors[r] = dict()
-        # for p in range(self.n + 1):
-        #     self.residual_fwd_neighbors[p + self.m] = dict()
-        #
-        # for reviewer in range(self.m):
-        #     num_papers = np.sum(self.curr_alloc[reviewer, :])
-        #     if num_papers > 0.1:
-        #         self.residual_fwd_neighbors[reviewer][self.n + self.m] = 0
-        #     if num_papers < self.loads[reviewer] - .1:
-        #         self.residual_fwd_neighbors[self.n + self.m][reviewer] = 0
-        #     for paper in range(self.n):
-        #         if self.curr_alloc[reviewer, paper] > .5:
-        #             self.residual_fwd_neighbors[paper + self.m][reviewer] = self.v_tilde[reviewer, paper]
-        #         else:
-        #             self.residual_fwd_neighbors[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
 
     def get_query(self, reviewer):
         qry_values = {}
@@ -1046,8 +989,8 @@ class GreedyMaxQueryModel(QueryModel):
         # local_curr_alloc = np.frombuffer(curr_alloc).reshape(m, n)
         # local_v_tilde = np.frombuffer(v_tilde).reshape(m, n)
         # local_loads = np.frombuffer(loads)
-        local_curr_alloc = np.frombuffer(buffers['curr_alloc']).reshape(m, n)
-        local_v_tilde = np.frombuffer(buffers['v_tilde']).reshape(m, n)
+        local_curr_alloc = np.frombuffer(buffers['curr_alloc']).reshape((m, n), order='C')
+        local_v_tilde = np.frombuffer(buffers['v_tilde']).reshape((m, n), order='C')
 
         if q in np.where(local_curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")
@@ -1085,11 +1028,11 @@ class GreedyMaxQueryModel(QueryModel):
         self.shared_max_query_value.value = 0.0
 
         raw_curr_alloc = RawArray('d', self.curr_alloc.shape[0] * self.curr_alloc.shape[1])
-        curr_alloc_np = np.frombuffer(raw_curr_alloc).reshape(self.curr_alloc.shape)
+        curr_alloc_np = np.frombuffer(raw_curr_alloc).reshape(self.curr_alloc.shape, order='C')
         np.copyto(curr_alloc_np, self.curr_alloc)
 
         raw_v_tilde = RawArray('d', self.v_tilde.shape[0] * self.v_tilde.shape[1])
-        v_tilde_np = np.frombuffer(raw_v_tilde).reshape(self.v_tilde.shape)
+        v_tilde_np = np.frombuffer(raw_v_tilde).reshape(self.v_tilde.shape, order='C')
         np.copyto(v_tilde_np, self.v_tilde)
 
         raw_loads = RawArray('d', self.loads.shape[0])
@@ -1282,8 +1225,8 @@ class GreedyMaxQueryModel(QueryModel):
         # We know that if the queried paper is not currently assigned, and its value is 0, the allocation won't change.
         # print("check value if paper %d for rev %d is %d" % (query, r, response))
 
-        curr_alloc = np.frombuffer(buffers['curr_alloc']).reshape(m, n)
-        v_tilde = np.frombuffer(buffers['v_tilde']).reshape(m, n)
+        curr_alloc = np.frombuffer(buffers['curr_alloc']).reshape((m, n), order='C')
+        v_tilde = np.frombuffer(buffers['v_tilde']).reshape((m, n), order='C')
         loads = np.frombuffer(buffers['loads'])
 
         if curr_alloc[r, query] < .1 and response == 0:

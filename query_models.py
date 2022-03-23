@@ -992,9 +992,12 @@ class GreedyMaxQueryModel(QueryModel):
         local_curr_alloc = np.frombuffer(buffers['curr_alloc']).reshape((m, n), order='C')
         local_v_tilde = np.frombuffer(buffers['v_tilde']).reshape((m, n), order='C')
 
+        total_time_spent_searching = 0.0
+
         if q in np.where(local_curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")
-            updated_expected_value_if_no = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 0, curr_expected_value, m, n)
+            updated_expected_value_if_no, time_spent_searching = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 0, curr_expected_value, m, n)
+            total_time_spent_searching += time_spent_searching
         else:
             updated_expected_value_if_no = curr_expected_value
 
@@ -1002,9 +1005,10 @@ class GreedyMaxQueryModel(QueryModel):
 
         if improvement_ub < mqv.value or math.isclose(improvement_ub, mqv.value):
             # print("check_expected_values: %s" % (time.time() - start_time), flush=True)
-            return (curr_expected_value, time.time() - start_time)
+            return (curr_expected_value, time.time() - start_time, total_time_spent_searching)
         else:
-            updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, curr_expected_value, m, n)
+            updated_expected_value_if_yes, time_spent_searching = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, curr_expected_value, m, n)
+            total_time_spent_searching += time_spent_searching
 
             expected_expected_value = local_v_tilde[reviewer, q] * updated_expected_value_if_yes + \
                                       (1 - local_v_tilde[reviewer, q]) * updated_expected_value_if_no
@@ -1012,7 +1016,7 @@ class GreedyMaxQueryModel(QueryModel):
             if expected_expected_value > mqv.value:
                 mqv.value = expected_expected_value
             # print("check_expected_values: %s" % (time.time() - start_time), flush=True)
-            return (expected_expected_value, time.time() - start_time)
+            return (expected_expected_value, time.time() - start_time, total_time_spent_searching)
 
     def get_query_parallel(self, reviewer):
         papers_to_check = sorted(list(set(range(self.n)) - self.already_queried[reviewer]), key=lambda x: random.random())
@@ -1051,7 +1055,10 @@ class GreedyMaxQueryModel(QueryModel):
                                                 zip(*list_of_copied_args), 300)
             expected_expected_values = [x[0] for x in expected_expected_values_and_times]
             times = [x[1] for x in expected_expected_values_and_times]
+            timesearching = [x[2] for x in expected_expected_values_and_times]
             print("Total time spent inside check_expected_values: %s" % np.sum(times))
+            print("Total time spent inside spfa_simple: %s" % np.sum(timesearching))
+
         # print("Average check_expected_value time: %s" % np.mean(times))
         print("Total time in starting and running check_expected_values: %s" % (time.time() - start_time))
         indices = np.argsort(expected_expected_values)[::-1].tolist()
@@ -1274,9 +1281,14 @@ class GreedyMaxQueryModel(QueryModel):
         num_iters = 0
         src_set = {r, query}
 
+        time_spent_searching = 0.0
+
         while cycle and num_iters < 2:
             num_iters += 1
+
+            st = time.time()
             cycle = spfa_simple(res_copy, src_set)
+            time_spent_searching += time.time() - st
 
             if cycle is not None:
                 cycle_set = set(cycle)
@@ -1365,4 +1377,4 @@ class GreedyMaxQueryModel(QueryModel):
                         if node in local_residual_fwd_neighbors[paper+m]:
                             del local_residual_fwd_neighbors[paper+m][node]
 
-        return updated_expected_value
+        return updated_expected_value, time_spent_searching

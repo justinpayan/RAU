@@ -59,6 +59,7 @@ class SuperStarQueryModel(QueryModel):
                 return s
             else:
                 return s / np.log2(pi + 1)
+
         # g_p = lambda bids: np.sqrt(bids)
         g_p = lambda bids: np.clip(bids, a_min=0, a_max=6)
         # g_r = lambda s, pi: (2 ** s - 1) / np.log2(pi + 1)
@@ -104,7 +105,6 @@ class VarianceReductionQueryModel(QueryModel):
             np.save(os.path.join("saved_init_expected_usw", dset_name), self.curr_expected_value)
             np.save(os.path.join("saved_init_max_usw_soln", dset_name), self.curr_alloc)
 
-
         # Bipartite graph, with reviewers on left side, papers on right. There is a dummy paper which we will
         # assign to all reviewers with remaining review load.
         # We need to have edges with positive v_tilde from paper j to reviewer i when j is assigned to i.
@@ -135,7 +135,7 @@ class VarianceReductionQueryModel(QueryModel):
         best_value = -np.inf
         best_q = None
         for q in set(range(self.n)) - self.already_queried[reviewer]:
-            print("Determine value of %d to %d" % (q,reviewer))
+            print("Determine value of %d to %d" % (q, reviewer))
             # Compute the value of this paper. Return whichever has the best value.
             # If the paper is not in the current alloc to reviewer, then the alloc won't change if the reviewer bids no
             # Likewise, if the paper IS in the current alloc, the alloc won't change if the reviewer bids yes. The
@@ -161,7 +161,8 @@ class VarianceReductionQueryModel(QueryModel):
 
             expected_variance_reduction = self.v_tilde[reviewer, q] * var_red_if_yes + \
                                           (1 - self.v_tilde[reviewer, q]) * var_red_if_no
-            print("Expected variance reduction of query %d for reviewer %d is %.4f" % (q, reviewer, expected_variance_reduction))
+            print("Expected variance reduction of query %d for reviewer %d is %.4f" % (
+                q, reviewer, expected_variance_reduction))
             if expected_variance_reduction > best_value:
                 best_q = q
                 best_value = expected_variance_reduction
@@ -233,8 +234,8 @@ class VarianceReductionQueryModel(QueryModel):
 
             if cycle is not None:
                 # for i in cycle:
-                    # print(i)
-                    # print(res_copy[i])
+                # print(i)
+                # print(res_copy[i])
                 # update the allocation and residual graph using the cycle
 
                 # The cycle goes backward in the residual graph. Thus, we need to assign the i-1'th paper to the i'th
@@ -265,8 +266,6 @@ class VarianceReductionQueryModel(QueryModel):
                         # Reverse the edge and negate its weight
                         res_copy[curr_rev][paper_to_drop + self.m] = -res_copy[paper_to_drop + self.m][curr_rev]
                         del res_copy[paper_to_drop + self.m][curr_rev]
-
-
 
                     # Update the residual graph if we have dropped the last paper
                     # We need to make it so that curr_rev can't receive the dummy paper anymore.
@@ -300,12 +299,12 @@ class VarianceReductionQueryModel(QueryModel):
         # Ok, so now this should be the best allocation. Check the new value of the expected USW, and make sure it
         # exceeds the value from applying the previous allocation with the new v_tilde.
         updated_expected_value = np.sum(updated_alloc * self.v_tilde) - \
-            self.v_tilde[r, query] * updated_alloc[r, query] + \
-            response * updated_alloc[r, query]
+                                 self.v_tilde[r, query] * updated_alloc[r, query] + \
+                                 response * updated_alloc[r, query]
 
         updated_expected_value_if_using_old_alloc = np.sum(self.curr_alloc * self.v_tilde) - \
-            self.v_tilde[r, query] * self.curr_alloc[r, query] + \
-            response * self.curr_alloc[r, query]
+                                                    self.v_tilde[r, query] * self.curr_alloc[r, query] + \
+                                                    response * self.curr_alloc[r, query]
 
         # for rev in sorted([22, 50, 37, 109, 127, 108, 146, 152, 19]):
         #     print("%d: %s" % (rev, np.where(updated_alloc[rev, :])[0].tolist()))
@@ -353,7 +352,6 @@ class GreedyMaxQueryModel(QueryModel):
             np.save(os.path.join("saved_init_expected_usw", dset_name), self.curr_expected_value)
             np.save(os.path.join("saved_init_max_usw_soln", dset_name), self.curr_alloc)
 
-
         # Bipartite graph, with reviewers on left side, papers on right. There is a dummy paper which we will
         # assign to all reviewers with remaining review load.
         # We need to have edges with positive v_tilde from paper j to reviewer i when j is assigned to i.
@@ -362,22 +360,6 @@ class GreedyMaxQueryModel(QueryModel):
         # We draw an edge FROM the dummy paper when a reviewer still has extra capacity.
         # We will search for negative weight cycles in this thing.
         # TODO: once this whole thing is implemented, I should also make sure that the suggested updates are valid.
-        print("Setting up residual graph")
-        self.residual_fwd_neighbors = np.zeros
-        self.residual_fwd_neighbors = {r: dict() for r in range(self.m)} | \
-                                      {(p + self.m): dict() for p in range(self.n + 1)}
-
-        for reviewer in range(self.m):
-            num_papers = np.sum(self.curr_alloc[reviewer, :])
-            if num_papers > 0.1:
-                self.residual_fwd_neighbors[reviewer][self.n + self.m] = 0
-            if num_papers < self.loads[reviewer] - .1:
-                self.residual_fwd_neighbors[self.n + self.m][reviewer] = 0
-            for paper in range(self.n):
-                if self.curr_alloc[reviewer, paper] > .5:
-                    self.residual_fwd_neighbors[paper + self.m][reviewer] = self.v_tilde[reviewer, paper]
-                else:
-                    self.residual_fwd_neighbors[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
 
     def get_query(self, reviewer):
         qry_values = {}
@@ -406,13 +388,13 @@ class GreedyMaxQueryModel(QueryModel):
 
                 expected_expected_value = self.v_tilde[reviewer, q] * updated_expected_value_if_yes + \
                                           (1 - self.v_tilde[reviewer, q]) * updated_expected_value_if_no
-                print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
+                print("Expected expected value of query %d for reviewer %d is %.4f" % (
+                    q, reviewer, expected_expected_value))
                 qry_values[q] = expected_expected_value
 
         # print(sorted(qry_values.items(), key=lambda x: -x[1])[:5], sorted(qry_values.items(), key=lambda x: -x[1])[-5:])
         best_q = [x[0] for x in sorted(qry_values.items(), key=lambda x: -x[1])][0]
         return best_q
-
 
     @staticmethod
     def check_expected_value(args, mqv):
@@ -430,7 +412,8 @@ class GreedyMaxQueryModel(QueryModel):
         else:
             updated_expected_value_if_no = query_model_object.curr_expected_value
 
-        improvement_ub = query_model_object.v_tilde[reviewer, q] * (1 - query_model_object.v_tilde[reviewer, q]) + query_model_object.curr_expected_value
+        improvement_ub = query_model_object.v_tilde[reviewer, q] * (
+                1 - query_model_object.v_tilde[reviewer, q]) + query_model_object.curr_expected_value
 
         if improvement_ub < mqv.value or math.isclose(improvement_ub, mqv.value):
             print("check_expected_values: %s" % (time.time() - start_time), flush=True)
@@ -447,7 +430,8 @@ class GreedyMaxQueryModel(QueryModel):
             return expected_expected_value
 
     def get_query_parallel(self, reviewer, pool):
-        papers_to_check = sorted(list(set(range(self.n)) - self.already_queried[reviewer]), key=lambda x: random.random())
+        papers_to_check = sorted(list(set(range(self.n)) - self.already_queried[reviewer]),
+                                 key=lambda x: random.random())
 
         # qry_values = {}
 
@@ -464,7 +448,9 @@ class GreedyMaxQueryModel(QueryModel):
         for argument in [reviewer, self]:
             list_of_copied_args.append(len(papers_to_check) * [argument])
 
-        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args), 500)
+        expected_expected_values = pool.map(
+            functools.partial(GreedyMaxQueryModel.check_expected_value, mqv=max_query_val), zip(*list_of_copied_args),
+            500)
         # print("Average check_expected_value time: %s" % np.mean(times))
         print("Total time in check_expected_values: %s" % (time.time() - start_time))
         indices = np.argsort(expected_expected_values)[::-1].tolist()
@@ -511,12 +497,6 @@ class GreedyMaxQueryModel(QueryModel):
         #         qry_values[q] = eev
         # best_q = [x[0] for x in sorted(qry_values.items(), key=lambda x: -x[1])][0]
         # return best_q
-
-
-
-
-
-
 
         # while len(papers_to_check):
         #     next_to_check = list(papers_to_check)[:min(self.num_procs, len(papers_to_check))]
@@ -617,22 +597,6 @@ class GreedyMaxQueryModel(QueryModel):
         old_expected_value = self.curr_expected_value
         self.curr_expected_value, self.curr_alloc = self._update_alloc(r, query, response)
         updated = math.isclose(old_expected_value, self.curr_expected_value)
-
-        # print("Setting up residual graph")
-        self.residual_fwd_neighbors = {r: dict() for r in range(self.m)} | \
-                                      {(p + self.m): dict() for p in range(self.n + 1)}
-
-        for reviewer in range(self.m):
-            num_papers = np.sum(self.curr_alloc[reviewer, :])
-            if num_papers > 0.1:
-                self.residual_fwd_neighbors[reviewer][self.n + self.m] = 0
-            if num_papers < self.loads[reviewer] - .1:
-                self.residual_fwd_neighbors[self.n + self.m][reviewer] = 0
-            for paper in range(self.n):
-                if self.curr_alloc[reviewer, paper] > .5:
-                    self.residual_fwd_neighbors[paper + self.m][reviewer] = self.v_tilde[reviewer, paper]
-                else:
-                    self.residual_fwd_neighbors[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
         return updated
 
     def _update_alloc(self, r, query, response):
@@ -663,7 +627,20 @@ class GreedyMaxQueryModel(QueryModel):
         # https://konaeakira.github.io/posts/using-the-shortest-path-faster-algorithm-to-find-negative-cycles.html
 
         updated_alloc = self.curr_alloc.copy()
-        res_copy = deepcopy(self.residual_fwd_neighbors)
+        res_copy = {r: dict() for r in range(self.m)} | \
+                   {(p + self.m): dict() for p in range(self.n + 1)}
+
+        for reviewer in range(self.m):
+            num_papers = np.sum(self.curr_alloc[reviewer, :])
+            if num_papers > 0.1:
+                res_copy[reviewer][self.n + self.m] = 0
+            if num_papers < self.loads[reviewer] - .1:
+                res_copy[self.n + self.m][reviewer] = 0
+            for paper in range(self.n):
+                if self.curr_alloc[reviewer, paper] > .5:
+                    res_copy[paper + self.m][reviewer] = self.v_tilde[reviewer, paper]
+                else:
+                    res_copy[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
 
         if self.curr_alloc[r, query] > .5:
             # update the weight of the edge from query to r (should be positive).
@@ -671,7 +648,6 @@ class GreedyMaxQueryModel(QueryModel):
         else:
             # update the weight of the edge from r to query (should be negative).
             res_copy[r][query + self.m] = -response
-
 
         # print("curr_alloc")
         # for rev in sorted([22, 50, 37, 109, 127, 108, 146, 152, 19]):
@@ -747,12 +723,12 @@ class GreedyMaxQueryModel(QueryModel):
         # Ok, so now this should be the best allocation. Check the new value of the expected USW, and make sure it
         # exceeds the value from applying the previous allocation with the new v_tilde.
         updated_expected_value = np.sum(updated_alloc * self.v_tilde) - \
-            self.v_tilde[r, query] * updated_alloc[r, query] + \
-            response * updated_alloc[r, query]
+                                 self.v_tilde[r, query] * updated_alloc[r, query] + \
+                                 response * updated_alloc[r, query]
 
         updated_expected_value_if_using_old_alloc = np.sum(self.curr_alloc * self.v_tilde) - \
-            self.v_tilde[r, query] * self.curr_alloc[r, query] + \
-            response * self.curr_alloc[r, query]
+                                                    self.v_tilde[r, query] * self.curr_alloc[r, query] + \
+                                                    response * self.curr_alloc[r, query]
         # for rev in sorted([22, 50, 37, 109, 127, 108, 146, 152, 19]):
         #     print("%d: %s" % (rev, np.where(updated_alloc[rev, :])[0].tolist()))
         #
@@ -802,7 +778,23 @@ class GreedyMaxQueryModel(QueryModel):
         # https://konaeakira.github.io/posts/using-the-shortest-path-faster-algorithm-to-find-negative-cycles.html
 
         updated_alloc = query_model_object.curr_alloc
-        res_copy = deepcopy(query_model_object.residual_fwd_neighbors)
+        m = query_model_object.m
+        n = query_model_object.n
+
+        res_copy = {r: dict() for r in range(m)} | \
+                   {(p + m): dict() for p in range(n + 1)}
+
+        for reviewer in range(m):
+            num_papers = np.sum(query_model_object.curr_alloc[reviewer, :])
+            if num_papers > 0.1:
+                res_copy[reviewer][n + m] = 0
+            if num_papers < query_model_object.loads[reviewer] - .1:
+                res_copy[n + m][reviewer] = 0
+            for paper in range(n):
+                if query_model_object.curr_alloc[reviewer, paper] > .5:
+                    res_copy[paper + m][reviewer] = query_model_object.v_tilde[reviewer, paper]
+                else:
+                    res_copy[reviewer][paper + m] = -query_model_object.v_tilde[reviewer, paper]
 
         if query_model_object.curr_alloc[r, query] > .5:
             # update the weight of the edge from query to r (should be positive).
@@ -833,14 +825,16 @@ class GreedyMaxQueryModel(QueryModel):
                         # We are assigning a non-dummy paper to the reviewer curr_rev
                         updated_alloc[curr_rev, paper_to_assign] = 1
                         # Reverse the edge and negate its weight
-                        res_copy[paper_to_assign + query_model_object.m][curr_rev] = -res_copy[curr_rev][paper_to_assign + query_model_object.m]
+                        res_copy[paper_to_assign + query_model_object.m][curr_rev] = -res_copy[curr_rev][
+                            paper_to_assign + query_model_object.m]
                         del res_copy[curr_rev][paper_to_assign + query_model_object.m]
 
                     if paper_to_drop < query_model_object.n:
                         # We are dropping a non-dummy paper from the reviewer curr_rev
                         updated_alloc[curr_rev, paper_to_drop] = 0
                         # Reverse the edge and negate its weight
-                        res_copy[curr_rev][paper_to_drop + query_model_object.m] = -res_copy[paper_to_drop + query_model_object.m][curr_rev]
+                        res_copy[curr_rev][paper_to_drop + query_model_object.m] = - \
+                            res_copy[paper_to_drop + query_model_object.m][curr_rev]
                         del res_copy[paper_to_drop + query_model_object.m][curr_rev]
 
                     # Update the residual graph if we have dropped the last paper
@@ -875,7 +869,7 @@ class GreedyMaxQueryModel(QueryModel):
         # Ok, so now this should be the best allocation. Check the new value of the expected USW, and make sure it
         # exceeds the value from applying the previous allocation with the new v_tilde.
         updated_expected_value = np.sum(updated_alloc * query_model_object.v_tilde) - \
-            query_model_object.v_tilde[r, query] * updated_alloc[r, query] + \
-            response * updated_alloc[r, query]
+                                 query_model_object.v_tilde[r, query] * updated_alloc[r, query] + \
+                                 response * updated_alloc[r, query]
 
         return updated_expected_value

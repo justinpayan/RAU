@@ -881,16 +881,20 @@ class VarianceReductionQueryModel(QueryModel):
 #         return updated_expected_value
 
 local_residual_fwd_neighbors = dict()
-curr_alloc_buffer = None
-v_tilde_buffer = None
-loads_buffer = None
+buffers = {}
+# curr_alloc_buffer = None
+# v_tilde_buffer = None
+# loads_buffer = None
 
 # (self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads)
 
 def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
-    curr_alloc_buffer = raw_curr_alloc
-    v_tilde_buffer = raw_v_tilde
-    loads_buffer = raw_loads
+    # curr_alloc_buffer = raw_curr_alloc
+    # v_tilde_buffer = raw_v_tilde
+    # loads_buffer = raw_loads
+    buffers['curr_alloc'] = raw_curr_alloc
+    buffers['v_tilde'] = raw_v_tilde
+    buffers['loads'] = raw_loads
 
     local_curr_alloc = np.frombuffer(raw_curr_alloc).reshape(m, n)
     local_v_tilde = np.frombuffer(raw_v_tilde).reshape(m, n)
@@ -1042,8 +1046,8 @@ class GreedyMaxQueryModel(QueryModel):
         # local_curr_alloc = np.frombuffer(curr_alloc).reshape(m, n)
         # local_v_tilde = np.frombuffer(v_tilde).reshape(m, n)
         # local_loads = np.frombuffer(loads)
-        local_curr_alloc = np.frombuffer(curr_alloc_buffer).reshape(m, n)
-        local_v_tilde = np.frombuffer(v_tilde_buffer).reshape(m, n)
+        local_curr_alloc = np.frombuffer(buffers['curr_alloc']).reshape(m, n)
+        local_v_tilde = np.frombuffer(buffers['v_tilde']).reshape(m, n)
 
         if q in np.where(local_curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")
@@ -1278,9 +1282,9 @@ class GreedyMaxQueryModel(QueryModel):
         # We know that if the queried paper is not currently assigned, and its value is 0, the allocation won't change.
         # print("check value if paper %d for rev %d is %d" % (query, r, response))
 
-        curr_alloc = np.frombuffer(curr_alloc_buffer).reshape(m, n)
-        v_tilde = np.frombuffer(v_tilde_buffer).reshape(m, n)
-        loads = np.frombuffer(loads_buffer)
+        curr_alloc = np.frombuffer(buffers['curr_alloc']).reshape(m, n)
+        v_tilde = np.frombuffer(buffers['v_tilde']).reshape(m, n)
+        loads = np.frombuffer(buffers['loads'])
 
         if curr_alloc[r, query] < .1 and response == 0:
             return curr_expected_value

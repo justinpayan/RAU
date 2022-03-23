@@ -1,9 +1,10 @@
+import ctypes
 import random
 
 from copy import deepcopy
 from collections import defaultdict
 import math
-from multiprocessing import Value, Manager
+from multiprocessing import Value, Manager, Array
 import functools
 import numpy as np
 import os

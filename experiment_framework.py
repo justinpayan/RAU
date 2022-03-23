@@ -19,9 +19,6 @@ def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir, num_pro
 
     total_bids = 0
 
-    pool = mp.Pool(processes=num_procs)
-    print(mp.cpu_count())
-
     # Iterate through the reviewers.
     for r in tqdm(sorted(range(m), key=lambda x: random.random())):
         num_bids = rng.poisson(lamb)

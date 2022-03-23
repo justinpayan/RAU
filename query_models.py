@@ -880,14 +880,18 @@ class VarianceReductionQueryModel(QueryModel):
 #
 #         return updated_expected_value
 
-local_residual_fwd_neighbors = None
-local_curr_alloc = None
-local_v_tilde = None
-local_loads = None
+local_residual_fwd_neighbors = dict()
+curr_alloc_buffer = None
+v_tilde_buffer = None
+loads_buffer = None
 
 # (self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads)
 
 def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
+    curr_alloc_buffer = raw_curr_alloc
+    v_tilde_buffer = raw_v_tilde
+    loads_buffer = raw_loads
+
     local_curr_alloc = np.frombuffer(raw_curr_alloc).reshape(m, n)
     local_v_tilde = np.frombuffer(raw_v_tilde).reshape(m, n)
     local_loads = np.frombuffer(raw_loads)
@@ -1038,10 +1042,12 @@ class GreedyMaxQueryModel(QueryModel):
         # local_curr_alloc = np.frombuffer(curr_alloc).reshape(m, n)
         # local_v_tilde = np.frombuffer(v_tilde).reshape(m, n)
         # local_loads = np.frombuffer(loads)
+        local_curr_alloc = np.frombuffer(curr_alloc_buffer).reshape(m, n)
+        local_v_tilde = np.frombuffer(v_tilde_buffer).reshape(m, n)
 
         if q in np.where(local_curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")
-            updated_expected_value_if_no = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 0, curr_expected_value)
+            updated_expected_value_if_no = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 0, curr_expected_value, m, n)
         else:
             updated_expected_value_if_no = curr_expected_value
 
@@ -1051,7 +1057,7 @@ class GreedyMaxQueryModel(QueryModel):
             print("check_expected_values: %s" % (time.time() - start_time), flush=True)
             return curr_expected_value
         else:
-            updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, curr_expected_value)
+            updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, curr_expected_value, m, n)
 
             expected_expected_value = local_v_tilde[reviewer, q] * updated_expected_value_if_yes + \
                                       (1 - local_v_tilde[reviewer, q]) * updated_expected_value_if_no
@@ -1140,24 +1146,24 @@ class GreedyMaxQueryModel(QueryModel):
         m = self.m
         n = self.n
 
-        local_residual_fwd_neighbors = dict()
+        rfn = dict()
         for r in range(m):
-            local_residual_fwd_neighbors[r] = dict()
+            rfn[r] = dict()
         for p in range(n + 1):
-            local_residual_fwd_neighbors[p + m] = dict()
+            rfn[p + m] = dict()
 
         for reviewer in range(m):
-            num_papers = np.sum(local_curr_alloc[reviewer, :])
+            num_papers = np.sum(self.curr_alloc[reviewer, :])
             if num_papers > 0.1:
-                local_residual_fwd_neighbors[reviewer][n + m] = 0
-            if num_papers < local_loads[reviewer] - .1:
-                local_residual_fwd_neighbors[n + m][reviewer] = 0
+                rfn[reviewer][n + m] = 0
+            if num_papers < self.loads[reviewer] - .1:
+                rfn[n + m][reviewer] = 0
             for paper in range(n):
-                if local_curr_alloc[reviewer, paper] > .5:
-                    local_residual_fwd_neighbors[paper + m][reviewer] = local_v_tilde[reviewer, paper]
+                if self.curr_alloc[reviewer, paper] > .5:
+                    rfn[paper + m][reviewer] = self.v_tilde[reviewer, paper]
                 else:
-                    local_residual_fwd_neighbors[reviewer][paper + m] = -local_v_tilde[reviewer, paper]
-        res_copy = local_residual_fwd_neighbors
+                    rfn[reviewer][paper + m] = -self.v_tilde[reviewer, paper]
+        res_copy = rfn
 
         if self.curr_alloc[r, query] > .5:
             # update the weight of the edge from query to r (should be positive).
@@ -1268,19 +1274,18 @@ class GreedyMaxQueryModel(QueryModel):
         return updated_expected_value, updated_alloc
 
     @staticmethod
-    def _update_alloc_static(r, query, response, curr_expected_value):
+    def _update_alloc_static(r, query, response, curr_expected_value, m, n):
         # We know that if the queried paper is not currently assigned, and its value is 0, the allocation won't change.
         # print("check value if paper %d for rev %d is %d" % (query, r, response))
 
-        curr_alloc = local_curr_alloc
+        curr_alloc = np.frombuffer(curr_alloc_buffer).reshape(m, n)
+        v_tilde = np.frombuffer(v_tilde_buffer).reshape(m, n)
+        loads = np.frombuffer(loads_buffer)
 
         if curr_alloc[r, query] < .1 and response == 0:
             return curr_expected_value
 
         res_copy = deepcopy(local_residual_fwd_neighbors)
-        m, n = curr_alloc.shape
-        v_tilde = local_v_tilde
-        loads = local_loads
 
         # Otherwise, we need to repeatedly check for augmenting paths in the residual graph
         # Honestly, I should probably maintain the residual graph at all times

@@ -1,4 +1,3 @@
-import ctypes
 import random
 
 from copy import deepcopy
@@ -907,9 +906,9 @@ class GreedyMaxQueryModel(QueryModel):
             np.save(os.path.join("saved_init_max_usw_soln", dset_name), self.curr_alloc)
 
         self.shared_max_query_value = self.proc_manager.Value('d', 0.0)
-        self.shared_curr_alloc = self.proc_manager.Array(ctypes.c_double, np.ravel(self.curr_alloc).tolist())
-        self.shared_v_tilde = self.proc_manager.Array(ctypes.c_double, np.ravel(self.v_tilde).tolist())
-        self.shared_loads = self.proc_manager.Array(ctypes.c_double, self.loads.tolist())
+        self.shared_curr_alloc = self.proc_manager.Array('d', np.ravel(self.curr_alloc).tolist())
+        self.shared_v_tilde = self.proc_manager.Array('d', np.ravel(self.v_tilde).tolist())
+        self.shared_loads = self.proc_manager.Array('d', self.loads.tolist())
 
         # Bipartite graph, with reviewers on left side, papers on right. There is a dummy paper which we will
         # assign to all reviewers with remaining review load.
@@ -1042,8 +1041,8 @@ class GreedyMaxQueryModel(QueryModel):
         updated = math.isclose(old_expected_value, self.curr_expected_value)
 
         if updated:
-            self.shared_curr_alloc = self.proc_manager.Array(ctypes.c_double, np.ravel(self.curr_alloc).tolist())
-            self.shared_v_tilde = self.proc_manager.Array(ctypes.c_double, np.ravel(self.v_tilde).tolist())
+            self.shared_curr_alloc = self.proc_manager.Array('d', np.ravel(self.curr_alloc).tolist())
+            self.shared_v_tilde = self.proc_manager.Array('d', np.ravel(self.v_tilde).tolist())
 
         self.residual_fwd_neighbors = self.proc_manager.dict()
         for r in range(self.m):

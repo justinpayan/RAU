@@ -880,6 +880,22 @@ class VarianceReductionQueryModel(QueryModel):
 #
 #         return updated_expected_value
 
+
+local_curr_alloc = None
+local_max_query_value = None
+local_v_tilde = None
+local_residual_fwd_neighbors = None
+local_loads = None
+
+def init_worker(curr_alloc, max_query_value, v_tilde, residual_fwd_neighbors, loads):
+    # Using a dictionary is not strictly necessary. You can also
+    # use global variables.
+    local_curr_alloc = curr_alloc
+    local_max_query_value = max_query_value
+    local_v_tilde = v_tilde
+    local_residual_fwd_neighbors = residual_fwd_neighbors
+    local_loads = loads
+
 # TODO: This won't work for ESW. Need to change the allocation update model and the way I estimate the variance given
 # TODO: some allocation.
 class GreedyMaxQueryModel(QueryModel):
@@ -904,11 +920,34 @@ class GreedyMaxQueryModel(QueryModel):
             self.curr_expected_value, self.curr_alloc = self.solver(self.v_tilde, self.covs, self.loads)
             np.save(os.path.join("saved_init_expected_usw", dset_name), self.curr_expected_value)
             np.save(os.path.join("saved_init_max_usw_soln", dset_name), self.curr_alloc)
+        # var_dict = {}
 
-        self.shared_max_query_value = self.proc_manager.Value('d', 0.0)
-        self.shared_curr_alloc = self.proc_manager.Array('d', np.ravel(self.curr_alloc).tolist())
-        self.shared_v_tilde = self.proc_manager.Array('d', np.ravel(self.v_tilde).tolist())
-        self.shared_loads = self.proc_manager.Array('d', self.loads.tolist())
+        # def init_worker(X, X_shape):
+            # Using a dictionary is not strictly necessary. You can also
+            # use global variables.
+            # var_dict['X'] = X
+            # var_dict['X_shape'] = X_shape
+        # data = np.random.randn(*X_shape)
+        # X = RawArray('d', X_shape[0] * X_shape[1])
+        # Wrap X as an numpy array so we can easily manipulates its data.
+        # X_np = np.frombuffer(X, dtype=np.float64).reshape(X_shape)
+        # Copy data to our shared array.
+        # np.copyto(X_np, data)
+
+        self.shared_max_query_value = Value('d', 0.0)
+
+        self.shared_curr_alloc = RawArray('d', self.curr_alloc.shape[0]*self.curr_alloc.shape[1])
+        self.shared_curr_alloc_np = np.frombuffer(self.shared_curr_alloc, dtype=np.float64).reshape(self.curr_alloc.shape)
+        np.copyto(self.shared_curr_alloc_np, self.shared_curr_alloc)
+
+        self.shared_v_tilde = RawArray('d', self.v_tilde.shape[0] * self.v_tilde.shape[1])
+        self.shared_v_tilde_np = np.frombuffer(self.shared_v_tilde, dtype=np.float64).reshape(
+            self.v_tilde.shape)
+        np.copyto(self.shared_v_tilde_np, self.shared_v_tilde)
+
+        self.shared_loads = RawArray('d', self.loads.shape[0])
+        self.shared_loads_np = np.frombuffer(self.shared_loads, dtype=np.float64)
+        np.copyto(self.shared_loads_np, self.shared_loads)
 
         # Bipartite graph, with reviewers on left side, papers on right. There is a dummy paper which we will
         # assign to all reviewers with remaining review load.
@@ -982,10 +1021,9 @@ class GreedyMaxQueryModel(QueryModel):
         # print(mqv.value)
         # print(flush=True)
 
-        # TODO: Need to convert back from the shared memory version of the array to a numpy array for each.
-        local_curr_alloc = np.frombuffer(curr_alloc).reshape(m, n)
-        local_v_tilde = np.frombuffer(v_tilde).reshape(m, n)
-        local_loads = np.frombuffer(loads)
+        # local_curr_alloc = np.frombuffer(curr_alloc).reshape(m, n)
+        # local_v_tilde = np.frombuffer(v_tilde).reshape(m, n)
+        # local_loads = np.frombuffer(loads)
 
         if q in np.where(local_curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")

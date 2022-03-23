@@ -889,6 +889,7 @@ def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
     # curr_alloc_buffer = raw_curr_alloc
     # v_tilde_buffer = raw_v_tilde
     # loads_buffer = raw_loads
+    st = time.time()
     buffers['curr_alloc'] = raw_curr_alloc
     buffers['v_tilde'] = raw_v_tilde
     buffers['loads'] = raw_loads
@@ -896,6 +897,8 @@ def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
     local_curr_alloc = np.frombuffer(raw_curr_alloc).reshape((m, n), order='C')
     local_v_tilde = np.frombuffer(raw_v_tilde).reshape((m, n), order='C')
     local_loads = np.frombuffer(raw_loads)
+    print("Time taken in creating buffers per worker: %s s" % (time.time() - st))
+    st = time.time()
 
     for r in range(m):
         local_residual_fwd_neighbors[r] = dict()
@@ -913,6 +916,7 @@ def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
                 local_residual_fwd_neighbors[paper + m][reviewer] = local_v_tilde[reviewer, paper]
             else:
                 local_residual_fwd_neighbors[reviewer][paper + m] = -local_v_tilde[reviewer, paper]
+    print("Time taken in creating rfn graph per worker: %s s" % (time.time() - st))
 
 # TODO: This won't work for ESW. Need to change the allocation update model and the way I estimate the variance given
 # TODO: some allocation.
@@ -997,8 +1001,8 @@ class GreedyMaxQueryModel(QueryModel):
         improvement_ub = local_v_tilde[reviewer, q] * (1 - local_v_tilde[reviewer, q]) + curr_expected_value
 
         if improvement_ub < mqv.value or math.isclose(improvement_ub, mqv.value):
-            print("check_expected_values: %s" % (time.time() - start_time), flush=True)
-            return curr_expected_value
+            # print("check_expected_values: %s" % (time.time() - start_time), flush=True)
+            return (curr_expected_value, time.time() - start_time)
         else:
             updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, curr_expected_value, m, n)
 
@@ -1007,8 +1011,8 @@ class GreedyMaxQueryModel(QueryModel):
             # print("Expected expected value of query %d for reviewer %d is %.4f" % (q, reviewer, expected_expected_value))
             if expected_expected_value > mqv.value:
                 mqv.value = expected_expected_value
-            print("check_expected_values: %s" % (time.time() - start_time), flush=True)
-            return expected_expected_value
+            # print("check_expected_values: %s" % (time.time() - start_time), flush=True)
+            return (expected_expected_value, time.time() - start_time)
 
     def get_query_parallel(self, reviewer):
         papers_to_check = sorted(list(set(range(self.n)) - self.already_queried[reviewer]), key=lambda x: random.random())
@@ -1042,11 +1046,14 @@ class GreedyMaxQueryModel(QueryModel):
         # local_loads = loads
 
         with Pool(processes=self.num_procs, initializer=init_worker, initargs=(self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads)) as pool:
-            expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value,
+            expected_expected_values_and_times = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value,
                                                 mqv=shared_max_query_value),
                                                 zip(*list_of_copied_args), 300)
+            expected_expected_values = [x[0] for x in expected_expected_values_and_times]
+            times = [x[1] for x in expected_expected_values_and_times]
+            print("Total time spent inside check_expected_values: %s" % np.mean(times))
         # print("Average check_expected_value time: %s" % np.mean(times))
-        print("Total time in check_expected_values: %s" % (time.time() - start_time))
+        print("Total time in starting and running check_expected_values: %s" % (time.time() - start_time))
         indices = np.argsort(expected_expected_values)[::-1].tolist()
         return [papers_to_check[i] for i in indices]
 

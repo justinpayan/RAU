@@ -3,7 +3,7 @@ import random
 from copy import deepcopy
 from collections import defaultdict
 import math
-from multiprocessing import Value, Manager, Array
+from multiprocessing import Value, Manager, RawArray, Pool
 import functools
 import numpy as np
 import os
@@ -880,21 +880,35 @@ class VarianceReductionQueryModel(QueryModel):
 #
 #         return updated_expected_value
 
-
-local_curr_alloc = None
-local_max_query_value = None
-local_v_tilde = None
 local_residual_fwd_neighbors = None
+local_curr_alloc = None
+local_v_tilde = None
 local_loads = None
 
-def init_worker(curr_alloc, max_query_value, v_tilde, residual_fwd_neighbors, loads):
-    # Using a dictionary is not strictly necessary. You can also
-    # use global variables.
-    local_curr_alloc = curr_alloc
-    local_max_query_value = max_query_value
-    local_v_tilde = v_tilde
-    local_residual_fwd_neighbors = residual_fwd_neighbors
-    local_loads = loads
+# (self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads)
+
+def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
+    local_curr_alloc = np.frombuffer(raw_curr_alloc).reshape(m, n)
+    local_v_tilde = np.frombuffer(raw_v_tilde).reshape(m, n)
+    local_loads = np.frombuffer(raw_loads)
+
+    local_residual_fwd_neighbors = dict()
+    for r in range(m):
+        local_residual_fwd_neighbors[r] = dict()
+    for p in range(n + 1):
+        local_residual_fwd_neighbors[p + m] = dict()
+
+    for reviewer in range(m):
+        num_papers = np.sum(local_curr_alloc[reviewer, :])
+        if num_papers > 0.1:
+            local_residual_fwd_neighbors[reviewer][n + m] = 0
+        if num_papers < local_loads[reviewer] - .1:
+            local_residual_fwd_neighbors[n + m][reviewer] = 0
+        for paper in range(n):
+            if local_curr_alloc[reviewer, paper] > .5:
+                local_residual_fwd_neighbors[paper + m][reviewer] = local_v_tilde[reviewer, paper]
+            else:
+                local_residual_fwd_neighbors[reviewer][paper + m] = -local_v_tilde[reviewer, paper]
 
 # TODO: This won't work for ESW. Need to change the allocation update model and the way I estimate the variance given
 # TODO: some allocation.
@@ -934,20 +948,20 @@ class GreedyMaxQueryModel(QueryModel):
         # Copy data to our shared array.
         # np.copyto(X_np, data)
 
-        self.shared_max_query_value = Value('d', 0.0)
+        self.shared_max_query_value = self.proc_manager.Value('d', 0.0)
 
-        self.shared_curr_alloc = RawArray('d', self.curr_alloc.shape[0]*self.curr_alloc.shape[1])
-        self.shared_curr_alloc_np = np.frombuffer(self.shared_curr_alloc, dtype=np.float64).reshape(self.curr_alloc.shape)
-        np.copyto(self.shared_curr_alloc_np, self.shared_curr_alloc)
-
-        self.shared_v_tilde = RawArray('d', self.v_tilde.shape[0] * self.v_tilde.shape[1])
-        self.shared_v_tilde_np = np.frombuffer(self.shared_v_tilde, dtype=np.float64).reshape(
-            self.v_tilde.shape)
-        np.copyto(self.shared_v_tilde_np, self.shared_v_tilde)
-
-        self.shared_loads = RawArray('d', self.loads.shape[0])
-        self.shared_loads_np = np.frombuffer(self.shared_loads, dtype=np.float64)
-        np.copyto(self.shared_loads_np, self.shared_loads)
+        # self.shared_curr_alloc = RawArray('d', self.curr_alloc.shape[0]*self.curr_alloc.shape[1])
+        # self.shared_curr_alloc_np = np.frombuffer(self.shared_curr_alloc, dtype=np.float64).reshape(self.curr_alloc.shape)
+        # np.copyto(self.shared_curr_alloc_np, self.shared_curr_alloc)
+        #
+        # self.shared_v_tilde = RawArray('d', self.v_tilde.shape[0] * self.v_tilde.shape[1])
+        # self.shared_v_tilde_np = np.frombuffer(self.shared_v_tilde, dtype=np.float64).reshape(
+        #     self.v_tilde.shape)
+        # np.copyto(self.shared_v_tilde_np, self.shared_v_tilde)
+        #
+        # self.shared_loads = RawArray('d', self.loads.shape[0])
+        # self.shared_loads_np = np.frombuffer(self.shared_loads, dtype=np.float64)
+        # np.copyto(self.shared_loads_np, self.shared_loads)
 
         # Bipartite graph, with reviewers on left side, papers on right. There is a dummy paper which we will
         # assign to all reviewers with remaining review load.
@@ -957,24 +971,24 @@ class GreedyMaxQueryModel(QueryModel):
         # We draw an edge FROM the dummy paper when a reviewer still has extra capacity.
         # We will search for negative weight cycles in this thing.
         # TODO: once this whole thing is implemented, I should also make sure that the suggested updates are valid.
-        print("Setting up residual graph")
-        self.residual_fwd_neighbors = self.proc_manager.dict()
-        for r in range(self.m):
-            self.residual_fwd_neighbors[r] = dict()
-        for p in range(self.n + 1):
-            self.residual_fwd_neighbors[p + self.m] = dict()
-
-        for reviewer in range(self.m):
-            num_papers = np.sum(self.curr_alloc[reviewer, :])
-            if num_papers > 0.1:
-                self.residual_fwd_neighbors[reviewer][self.n + self.m] = 0
-            if num_papers < self.loads[reviewer] - .1:
-                self.residual_fwd_neighbors[self.n + self.m][reviewer] = 0
-            for paper in range(self.n):
-                if self.curr_alloc[reviewer, paper] > .5:
-                    self.residual_fwd_neighbors[paper + self.m][reviewer] = self.v_tilde[reviewer, paper]
-                else:
-                    self.residual_fwd_neighbors[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
+        # print("Setting up residual graph")
+        # self.residual_fwd_neighbors = self.proc_manager.dict()
+        # for r in range(self.m):
+        #     self.residual_fwd_neighbors[r] = dict()
+        # for p in range(self.n + 1):
+        #     self.residual_fwd_neighbors[p + self.m] = dict()
+        #
+        # for reviewer in range(self.m):
+        #     num_papers = np.sum(self.curr_alloc[reviewer, :])
+        #     if num_papers > 0.1:
+        #         self.residual_fwd_neighbors[reviewer][self.n + self.m] = 0
+        #     if num_papers < self.loads[reviewer] - .1:
+        #         self.residual_fwd_neighbors[self.n + self.m][reviewer] = 0
+        #     for paper in range(self.n):
+        #         if self.curr_alloc[reviewer, paper] > .5:
+        #             self.residual_fwd_neighbors[paper + self.m][reviewer] = self.v_tilde[reviewer, paper]
+        #         else:
+        #             self.residual_fwd_neighbors[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
 
     def get_query(self, reviewer):
         qry_values = {}
@@ -1012,7 +1026,7 @@ class GreedyMaxQueryModel(QueryModel):
 
 
     @staticmethod
-    def check_expected_value(args, mqv, residual_fwd_neighbors, curr_alloc, v_tilde, loads):
+    def check_expected_value(args, mqv):
         start_time = time.time()
         q, reviewer, curr_expected_value, m, n = args
 
@@ -1027,7 +1041,7 @@ class GreedyMaxQueryModel(QueryModel):
 
         if q in np.where(local_curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")
-            updated_expected_value_if_no = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 0, local_curr_alloc, curr_expected_value, local_v_tilde, residual_fwd_neighbors, m, n, local_loads)
+            updated_expected_value_if_no = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 0, curr_expected_value)
         else:
             updated_expected_value_if_no = curr_expected_value
 
@@ -1037,7 +1051,7 @@ class GreedyMaxQueryModel(QueryModel):
             print("check_expected_values: %s" % (time.time() - start_time), flush=True)
             return curr_expected_value
         else:
-            updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, local_curr_alloc, curr_expected_value, local_v_tilde, residual_fwd_neighbors, m, n, local_loads)
+            updated_expected_value_if_yes = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, curr_expected_value)
 
             expected_expected_value = local_v_tilde[reviewer, q] * updated_expected_value_if_yes + \
                                       (1 - local_v_tilde[reviewer, q]) * updated_expected_value_if_no
@@ -1047,7 +1061,7 @@ class GreedyMaxQueryModel(QueryModel):
             print("check_expected_values: %s" % (time.time() - start_time), flush=True)
             return expected_expected_value
 
-    def get_query_parallel(self, reviewer, pool):
+    def get_query_parallel(self, reviewer):
         papers_to_check = sorted(list(set(range(self.n)) - self.already_queried[reviewer]), key=lambda x: random.random())
 
         start_time = time.time()
@@ -1060,13 +1074,28 @@ class GreedyMaxQueryModel(QueryModel):
 
         self.shared_max_query_value.value = 0.0
 
-        expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value,
-                                                              mqv=self.shared_max_query_value,
-                                                              residual_fwd_neighbors=self.residual_fwd_neighbors,
-                                                              curr_alloc=self.shared_curr_alloc,
-                                                              v_tilde=self.shared_v_tilde,
-                                                              loads=self.shared_loads),
-                                            zip(*list_of_copied_args), 300)
+        raw_curr_alloc = RawArray('d', self.curr_alloc.shape[0] * self.curr_alloc.shape[1])
+        curr_alloc_np = np.frombuffer(raw_curr_alloc).reshape(self.curr_alloc.shape)
+        np.copyto(curr_alloc_np, self.curr_alloc)
+
+        raw_v_tilde = RawArray('d', self.v_tilde.shape[0] * self.v_tilde.shape[1])
+        v_tilde_np = np.frombuffer(raw_v_tilde).reshape(self.v_tilde.shape)
+        np.copyto(v_tilde_np, self.v_tilde)
+
+        raw_loads = RawArray('d', self.loads.shape[0])
+        loads_np = np.frombuffer(raw_loads).reshape(self.loads.shape)
+        np.copyto(loads_np, self.loads)
+
+        # local_curr_alloc = curr_alloc
+        # local_max_query_value = max_query_value
+        # local_v_tilde = v_tilde
+        # local_residual_fwd_neighbors = residual_fwd_neighbors
+        # local_loads = loads
+
+        with Pool(processes=self.num_procs, initializer=init_worker, initargs=(self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads)) as pool:
+            expected_expected_values = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value,
+                                                mqv=self.shared_max_query_value),
+                                                zip(*list_of_copied_args), 300)
         # print("Average check_expected_value time: %s" % np.mean(times))
         print("Total time in check_expected_values: %s" % (time.time() - start_time))
         indices = np.argsort(expected_expected_values)[::-1].tolist()
@@ -1078,27 +1107,6 @@ class GreedyMaxQueryModel(QueryModel):
         self.curr_expected_value, self.curr_alloc = self._update_alloc(r, query, response)
         updated = math.isclose(old_expected_value, self.curr_expected_value)
 
-        if updated:
-            self.shared_curr_alloc = self.proc_manager.Array('d', np.ravel(self.curr_alloc).tolist())
-            self.shared_v_tilde = self.proc_manager.Array('d', np.ravel(self.v_tilde).tolist())
-
-        self.residual_fwd_neighbors = self.proc_manager.dict()
-        for r in range(self.m):
-            self.residual_fwd_neighbors[r] = dict()
-        for p in range(self.n + 1):
-            self.residual_fwd_neighbors[p + self.m] = dict()
-
-        for reviewer in range(self.m):
-            num_papers = np.sum(self.curr_alloc[reviewer, :])
-            if num_papers > 0.1:
-                self.residual_fwd_neighbors[reviewer][self.n + self.m] = 0
-            if num_papers < self.loads[reviewer] - .1:
-                self.residual_fwd_neighbors[self.n + self.m][reviewer] = 0
-            for paper in range(self.n):
-                if self.curr_alloc[reviewer, paper] > .5:
-                    self.residual_fwd_neighbors[paper + self.m][reviewer] = self.v_tilde[reviewer, paper]
-                else:
-                    self.residual_fwd_neighbors[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
         return updated
 
     def _update_alloc(self, r, query, response):
@@ -1129,7 +1137,27 @@ class GreedyMaxQueryModel(QueryModel):
         # https://konaeakira.github.io/posts/using-the-shortest-path-faster-algorithm-to-find-negative-cycles.html
 
         updated_alloc = self.curr_alloc.copy()
-        res_copy = deepcopy(self.residual_fwd_neighbors)
+        m = self.m
+        n = self.n
+
+        local_residual_fwd_neighbors = dict()
+        for r in range(m):
+            local_residual_fwd_neighbors[r] = dict()
+        for p in range(n + 1):
+            local_residual_fwd_neighbors[p + m] = dict()
+
+        for reviewer in range(m):
+            num_papers = np.sum(local_curr_alloc[reviewer, :])
+            if num_papers > 0.1:
+                local_residual_fwd_neighbors[reviewer][n + m] = 0
+            if num_papers < local_loads[reviewer] - .1:
+                local_residual_fwd_neighbors[n + m][reviewer] = 0
+            for paper in range(n):
+                if local_curr_alloc[reviewer, paper] > .5:
+                    local_residual_fwd_neighbors[paper + m][reviewer] = local_v_tilde[reviewer, paper]
+                else:
+                    local_residual_fwd_neighbors[reviewer][paper + m] = -local_v_tilde[reviewer, paper]
+        res_copy = local_residual_fwd_neighbors
 
         if self.curr_alloc[r, query] > .5:
             # update the weight of the edge from query to r (should be positive).
@@ -1240,12 +1268,19 @@ class GreedyMaxQueryModel(QueryModel):
         return updated_expected_value, updated_alloc
 
     @staticmethod
-    def _update_alloc_static(r, query, response, curr_alloc, curr_expected_value, v_tilde, residual_fwd_neighbors, m, n, loads):
+    def _update_alloc_static(r, query, response, curr_expected_value):
         # We know that if the queried paper is not currently assigned, and its value is 0, the allocation won't change.
         # print("check value if paper %d for rev %d is %d" % (query, r, response))
 
+        curr_alloc = local_curr_alloc
+
         if curr_alloc[r, query] < .1 and response == 0:
             return curr_expected_value
+
+        res_copy = deepcopy(local_residual_fwd_neighbors)
+        m, n = curr_alloc.shape
+        v_tilde = local_v_tilde
+        loads = local_loads
 
         # Otherwise, we need to repeatedly check for augmenting paths in the residual graph
         # Honestly, I should probably maintain the residual graph at all times
@@ -1268,7 +1303,6 @@ class GreedyMaxQueryModel(QueryModel):
         # https://konaeakira.github.io/posts/using-the-shortest-path-faster-algorithm-to-find-negative-cycles.html
 
         updated_alloc = curr_alloc
-        res_copy = deepcopy(residual_fwd_neighbors)
 
         if curr_alloc[r, query] > .5:
             # update the weight of the edge from query to r (should be positive).

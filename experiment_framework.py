@@ -32,7 +32,7 @@ def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir, num_pro
         for _ in range(num_bids):
             # query = query_model.get_queries_parallel(r)[0]
             if updated:
-                queries = query_model.get_query_parallel(r, pool)
+                queries = query_model.get_query_parallel(r)
             # query = query_model.get_query(r)
             query = queries.pop(0)
             updated = query_model.update(r, query, int(true_bids[r, query]))

@@ -1052,7 +1052,7 @@ class GreedyMaxQueryModel(QueryModel):
         with Pool(processes=self.num_procs, initializer=init_worker, initargs=(self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads)) as pool:
             expected_expected_values_and_times = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value,
                                                 mqv=shared_max_query_value),
-                                                zip(*list_of_copied_args), 300)
+                                                zip(*list_of_copied_args), 100)
             expected_expected_values = [x[0] for x in expected_expected_values_and_times]
             times = [x[1] for x in expected_expected_values_and_times]
             timesearching = [x[2] for x in expected_expected_values_and_times]

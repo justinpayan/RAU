@@ -96,6 +96,38 @@ def spfa_simple(fwd_adj_list, src_set):
 
     return None
 
+
+def spfa_adj_matrix(adj_matrix):
+    dis = [0] * adj_matrix.shape[0]
+    pre = [-1] * adj_matrix.shape[0]
+    vertex_queue = Queue()
+    vertex_queue_set = set()
+    for v in range(adj_matrix.shape[0]):
+        vertex_queue.put(v)
+        vertex_queue_set.add(v)
+    i = 0
+    while vertex_queue.qsize():
+        u = vertex_queue.get()
+        vertex_queue_set.remove(u)
+        for v in np.where(adj_matrix[u, :] < np.inf)[0].tolist():
+            if dis[u] + adj_matrix[u][v] < dis[v] and not math.isclose(dis[u] + adj_matrix[u][v], dis[v]):
+                pre[v] = u
+                dis[v] = dis[u] + adj_matrix[u][v]
+                i += 1
+                if i == adj_matrix.shape[0]:
+                    i = 0
+                    cyc = detect_cycle(pre)
+                    if cyc:
+                        return cyc
+                if v not in vertex_queue_set:
+                    vertex_queue.put(v)
+                    vertex_queue_set.add(v)
+    cyc = detect_cycle(pre)
+    if cyc:
+        return cyc
+    return None
+
+
 # Detect a cycle in the graph using the precursor list. How is this done? I think via some kind of DFS? Oh, right,
 # you keep a list of nodes you have visited, and you traverse the precursor edges. If one of these traversals ends up
 # back where it started, you have a cycle. If you get to the end of pre and you haven't revisited anything,
@@ -135,7 +167,7 @@ def cycle_beam(adj_matrix, start_node, b, d, beamwidth):
     # Go ahead and argsort the adj_matrix, so we know the best edges for each node
     best_nbrs = np.argsort(adj_matrix, axis=1)
 
-    def expand_path(path, path_set, b, best_nbrs, adj_matrix, start_node):
+    def expand_path(path, b, best_nbrs, adj_matrix, start_node):
         final_node = path[-1]
         next_nodes = []
         costs = []
@@ -144,10 +176,10 @@ def cycle_beam(adj_matrix, start_node, b, d, beamwidth):
 
         while len(next_nodes) < b and \
             nbr_idx < best_nbrs.shape[1] and \
-            adj_matrix[final_node, best_nbrs[nbr_idx]] < np.inf:
+            adj_matrix[final_node, best_nbrs[final_node, nbr_idx]] < np.inf:
 
             v = best_nbrs[final_node, nbr_idx]
-            if v not in path_set:
+            if v not in path:
                 next_nodes.append(v)
                 costs.append(adj_matrix[final_node, v])
                 found_start.append(False)
@@ -164,21 +196,24 @@ def cycle_beam(adj_matrix, start_node, b, d, beamwidth):
     # At the end of a full iteration, we will check all the paths in the beam. If any path has reached the start
     # and has a negative cost, we can return such a cycle with lowest cost. If not, then we truncate the beam
     # and move to the next iteration.
-    beam = [[[start_node], 0]]
-    beam_sets = [{start_node}]
+    beam = [[[start_node], 0, {start_node}]]
     for _ in range(d):
         new_beam = []
         check_for_term = set()
         for path_idx in range(len(beam)):
+            # print(beam[path_idx])
+            # print(beam[path_idx][0])
             next_nodes, costs, found_start = \
-                expand_path(beam[path_idx][0], beam_sets[path_idx], b, best_nbrs, adj_matrix, start_node)
+                expand_path(beam[path_idx][0], b, best_nbrs, adj_matrix, start_node)
 
             # Append all the new paths to the new_beam.
             curr_cost = beam[path_idx][1]
             for n_idx in range(len(next_nodes)):
                 if found_start[n_idx]:
                     check_for_term.add(len(new_beam))
-                new_beam.append([beam[path_idx] + [next_nodes[n_idx]], curr_cost + costs[n_idx]])
+                new_beam.append([beam[path_idx][0] + [next_nodes[n_idx]], curr_cost + costs[n_idx]])
+            # print("new_beam: ", new_beam)
+
 
         # If any of the paths got back to the start, we should check which of them have negative costs (if any) and
         # return the best one.

@@ -1,8 +1,5 @@
 import random
 from tqdm import tqdm
-import multiprocessing as mp
-from multiprocessing import Value
-
 
 from utils import *
 
@@ -30,6 +27,8 @@ def run_experiment(dset_name, query_model, solver, seed, lamb, data_dir, num_pro
             # query = query_model.get_queries_parallel(r)[0]
             if updated:
                 queries = query_model.get_query_parallel(r)
+            # query = query_model.get_query(r)
+            # queries = query_model.get_query(r)
             # query = query_model.get_query(r)
             query = queries.pop(0)
             updated = query_model.update(r, query, int(true_bids[r, query]))

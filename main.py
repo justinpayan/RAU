@@ -48,7 +48,8 @@ def query_model(dset_name, obj, lamb, seed, data_dir, num_procs):
     else:
         print("USW is the only allowed objective right now")
         sys.exit(0)
-    query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name, data_dir, num_procs)
+    # query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name)
+    query_model = GreedyMaxQueryModelParallel(tpms, covs, loads, solver, dset_name, data_dir, num_procs)
     # query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
     # query_model = SuperStarQueryModel(tpms, dset_name)
     # query_model = RandomQueryModel(tpms)

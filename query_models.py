@@ -1058,7 +1058,7 @@ class GreedyMaxQueryModel(QueryModel):
             times = [x[1] for x in expected_expected_values_and_times]
             timesearching = [x[2] for x in expected_expected_values_and_times]
             print("Total time spent inside check_expected_values: %s" % np.sum(times))
-            print("Total time spent inside spfa_simple: %s" % np.sum(timesearching))
+            print("Total time spent finding cycles: %s" % np.sum(timesearching))
 
         # print("Average check_expected_value time: %s" % np.mean(times))
         print("Total time in starting and running check_expected_values: %s" % (time.time() - start_time))
@@ -1290,9 +1290,9 @@ class GreedyMaxQueryModel(QueryModel):
             st = time.time()
             # depth_limit = 10
             # cycle = spfa_simple(res_copy, src_set, depth_limit)
-            b = 5
-            d = 10
-            beamwidth = 50
+            b = 20
+            d = 50
+            beamwidth = 1000
 
             # We have to start searching from the paper when response is 0,
             # and start from the reviewer when response is 1

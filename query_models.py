@@ -1026,7 +1026,7 @@ class GreedyMaxQueryModel(QueryModel):
         loads_np = np.frombuffer(raw_loads).reshape(self.loads.shape)
         np.copyto(loads_np, self.loads)
 
-        adj_matrix = np.ones(self.m + self.n + 1, self.m + self.n + 1) * np.inf
+        adj_matrix = np.ones((self.m + self.n + 1, self.m + self.n + 1)) * np.inf
 
         for reviewer in range(self.m):
             num_papers = np.sum(self.curr_alloc[reviewer, :])

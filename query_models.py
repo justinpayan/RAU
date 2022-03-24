@@ -979,7 +979,7 @@ class GreedyMaxQueryModelParallel(QueryModel):
 
         if q in np.where(local_curr_alloc[reviewer, :])[0].tolist():
             # print("Update if no")
-            updated_expected_value_if_no, time_spent_searching = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 0, curr_expected_value, m, n)
+            updated_expected_value_if_no, time_spent_searching = GreedyMaxQueryModelParallel._update_alloc_static(reviewer, q, 0, curr_expected_value, m, n)
             total_time_spent_searching += time_spent_searching
         else:
             updated_expected_value_if_no = curr_expected_value
@@ -990,7 +990,7 @@ class GreedyMaxQueryModelParallel(QueryModel):
             # print("check_expected_values: %s" % (time.time() - start_time), flush=True)
             return (curr_expected_value, time.time() - start_time, total_time_spent_searching)
         else:
-            updated_expected_value_if_yes, time_spent_searching = GreedyMaxQueryModel._update_alloc_static(reviewer, q, 1, curr_expected_value, m, n)
+            updated_expected_value_if_yes, time_spent_searching = GreedyMaxQueryModelParallel._update_alloc_static(reviewer, q, 1, curr_expected_value, m, n)
             total_time_spent_searching += time_spent_searching
 
             expected_expected_value = local_v_tilde[reviewer, q] * updated_expected_value_if_yes + \
@@ -1051,7 +1051,7 @@ class GreedyMaxQueryModelParallel(QueryModel):
         # local_loads = loads
 
         with Pool(processes=self.num_procs, initializer=init_worker, initargs=(self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads, raw_adj_matrix)) as pool:
-            expected_expected_values_and_times = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value,
+            expected_expected_values_and_times = pool.map(functools.partial(GreedyMaxQueryModelParallel.check_expected_value,
                                                 mqv=shared_max_query_value),
                                                 zip(*list_of_copied_args), 100)
             expected_expected_values = [x[0] for x in expected_expected_values_and_times]

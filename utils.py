@@ -129,6 +129,83 @@ def detect_cycle(pre):
     return None
 
 
+def cycle_beam(adj_matrix, start_node, b, d, beamwidth):
+    # adj_matrix is [m + (n+1)] x [m + (n+1)]. It has the cost of an edge when an edge exists, otherwise np.inf
+
+    # Go ahead and argsort the adj_matrix, so we know the best edges for each node
+    best_nbrs = np.argsort(adj_matrix, axis=1)
+
+    def expand_path(path, path_set, b, best_nbrs, adj_matrix, start_node):
+        final_node = path[-1]
+        next_nodes = []
+        costs = []
+        nbr_idx = 0
+        found_start = []
+
+        while len(next_nodes) < b and \
+            nbr_idx < best_nbrs.shape[1] and \
+            adj_matrix[final_node, best_nbrs[nbr_idx]] < np.inf:
+
+            v = best_nbrs[final_node, nbr_idx]
+            if v not in path_set:
+                next_nodes.append(v)
+                costs.append(adj_matrix[final_node, v])
+                found_start.append(False)
+            elif v == start_node:
+                next_nodes.append(v)
+                costs.append(adj_matrix[final_node, start_node])
+                found_start.append(True)
+
+            nbr_idx += 1
+        return next_nodes, costs, found_start
+
+    # Search forward and backward (basically, forward through the transposed matrix) from the start_node
+    # The beam holds 1) the path, 2) the cost of the path, and 3) whether or not the path has reached the start_node
+    # At the end of a full iteration, we will check all the paths in the beam. If any path has reached the start
+    # and has a negative cost, we can return such a cycle with lowest cost. If not, then we truncate the beam
+    # and move to the next iteration.
+    beam = [[[start_node], 0]]
+    beam_sets = [{start_node}]
+    for _ in range(d):
+        new_beam = []
+        check_for_term = set()
+        for path_idx in range(len(beam)):
+            next_nodes, costs, found_start = \
+                expand_path(beam[path_idx][0], beam_sets[path_idx], b, best_nbrs, adj_matrix, start_node)
+
+            # Append all the new paths to the new_beam.
+            curr_cost = beam[path_idx][1]
+            for n_idx in range(len(next_nodes)):
+                if found_start[n_idx]:
+                    check_for_term.add(len(new_beam))
+                new_beam.append([beam[path_idx] + [next_nodes[n_idx]], curr_cost + costs[n_idx]])
+
+        # If any of the paths got back to the start, we should check which of them have negative costs (if any) and
+        # return the best one.
+        if check_for_term:
+            cycs = [new_beam[i] for i in check_for_term]
+            lowest_cost = np.inf
+            best_cyc = -1
+            for c_idx, c in enumerate(cycs):
+                if c[1] < lowest_cost:
+                    lowest_cost = c[1]
+                    best_cyc = c_idx
+            if lowest_cost < 0:
+                return cycs[best_cyc][0][:-1]
+            # If none of the cycles have negative cost, then we can just remove all of them from the beam.
+            else:
+                tmp = []
+                for idx, path in enumerate(new_beam):
+                    if idx not in check_for_term:
+                        tmp.append(path)
+                new_beam = tmp
+
+        # Sort the new beam and truncate.
+        beam = sorted(new_beam, key=lambda x: x[1])[:beamwidth]
+
+    return None
+
+
 def super_algorithm(g_p, g_r, f, s, bids, h, trade_param, special=False):
     """
     Copied from https://github.com/fiezt/Peer-Review-Bidding/blob/master/CODE/SUPER_Algorithm.ipynb.

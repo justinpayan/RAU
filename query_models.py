@@ -9,7 +9,7 @@ import numpy as np
 import os
 import time
 
-from utils import spfa, spfa_simple, super_algorithm
+from utils import spfa, spfa_simple, super_algorithm, cycle_beam
 
 
 class QueryModel(object):
@@ -882,10 +882,9 @@ class VarianceReductionQueryModel(QueryModel):
 
 proc_manager = Manager()
 shared_max_query_value = proc_manager.Value('d', 0.0)
-local_residual_fwd_neighbors = dict()
 buffers = {}
 
-def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
+def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads, raw_adj_matrix):
     # curr_alloc_buffer = raw_curr_alloc
     # v_tilde_buffer = raw_v_tilde
     # loads_buffer = raw_loads
@@ -893,30 +892,14 @@ def init_worker(m, n, raw_curr_alloc, raw_v_tilde, raw_loads):
     buffers['curr_alloc'] = raw_curr_alloc
     buffers['v_tilde'] = raw_v_tilde
     buffers['loads'] = raw_loads
+    buffers['adj_matrix'] = raw_adj_matrix
 
     local_curr_alloc = np.frombuffer(raw_curr_alloc).reshape((m, n), order='C')
     local_v_tilde = np.frombuffer(raw_v_tilde).reshape((m, n), order='C')
     local_loads = np.frombuffer(raw_loads)
+    local_adj_matrix = np.frombuffer(raw_adj_matrix).reshape((m+n+1, m+n+1), order='C')
     print("Time taken in creating buffers per worker: %s s" % (time.time() - st))
-    st = time.time()
 
-    for r in range(m):
-        local_residual_fwd_neighbors[r] = dict()
-    for p in range(n + 1):
-        local_residual_fwd_neighbors[p + m] = dict()
-
-    for reviewer in range(m):
-        num_papers = np.sum(local_curr_alloc[reviewer, :])
-        if num_papers > 0.1:
-            local_residual_fwd_neighbors[reviewer][n + m] = 0
-        if num_papers < local_loads[reviewer] - .1:
-            local_residual_fwd_neighbors[n + m][reviewer] = 0
-        for paper in range(n):
-            if local_curr_alloc[reviewer, paper] > .5:
-                local_residual_fwd_neighbors[paper + m][reviewer] = local_v_tilde[reviewer, paper]
-            else:
-                local_residual_fwd_neighbors[reviewer][paper + m] = -local_v_tilde[reviewer, paper]
-    print("Time taken in creating rfn graph per worker: %s s" % (time.time() - st), flush=True)
 
 # TODO: This won't work for ESW. Need to change the allocation update model and the way I estimate the variance given
 # TODO: some allocation.
@@ -1043,13 +1026,31 @@ class GreedyMaxQueryModel(QueryModel):
         loads_np = np.frombuffer(raw_loads).reshape(self.loads.shape)
         np.copyto(loads_np, self.loads)
 
+        adj_matrix = np.ones(self.m + self.n + 1, self.m + self.n + 1) * np.inf
+
+        for reviewer in range(self.m):
+            num_papers = np.sum(self.curr_alloc[reviewer, :])
+            if num_papers > 0.1:
+                adj_matrix[reviewer, self.n + self.m] = 0
+            if num_papers < self.loads[reviewer] - .1:
+                adj_matrix[self.n + self.m][reviewer] = 0
+            for paper in range(self.n):
+                if self.curr_alloc[reviewer, paper] > .5:
+                    adj_matrix[paper + self.m][reviewer] = self.v_tilde[reviewer, paper]
+                else:
+                    adj_matrix[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
+
+        raw_adj_matrix = RawArray('d', adj_matrix.shape[0] * adj_matrix.shape[1])
+        adj_matrix_np = np.frombuffer(raw_adj_matrix).reshape(adj_matrix.shape, order='C')
+        np.copyto(adj_matrix_np, adj_matrix)
+
         # local_curr_alloc = curr_alloc
         # local_max_query_value = max_query_value
         # local_v_tilde = v_tilde
         # local_residual_fwd_neighbors = residual_fwd_neighbors
         # local_loads = loads
 
-        with Pool(processes=self.num_procs, initializer=init_worker, initargs=(self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads)) as pool:
+        with Pool(processes=self.num_procs, initializer=init_worker, initargs=(self.m, self.n, raw_curr_alloc, raw_v_tilde, raw_loads, raw_adj_matrix)) as pool:
             expected_expected_values_and_times = pool.map(functools.partial(GreedyMaxQueryModel.check_expected_value,
                                                 mqv=shared_max_query_value),
                                                 zip(*list_of_copied_args), 100)
@@ -1238,13 +1239,12 @@ class GreedyMaxQueryModel(QueryModel):
         curr_alloc = np.frombuffer(buffers['curr_alloc']).reshape((m, n), order='C')
         v_tilde = np.frombuffer(buffers['v_tilde']).reshape((m, n), order='C')
         loads = np.frombuffer(buffers['loads'])
+        adj_matrix = np.frombuffer(buffers['adj_matrix']).reshape((m+n+1, m+n+1), order='C')
 
         if curr_alloc[r, query] < .1 and response == 0:
             return curr_expected_value
 
         touched_nodes = set()
-
-        res_copy = local_residual_fwd_neighbors
 
         # Otherwise, we need to repeatedly check for augmenting paths in the residual graph
         # Honestly, I should probably maintain the residual graph at all times
@@ -1270,29 +1270,41 @@ class GreedyMaxQueryModel(QueryModel):
 
         if curr_alloc[r, query] > .5:
             # update the weight of the edge from query to r (should be positive).
-            res_copy[query + m][r] = response
+            adj_matrix[query + m][r] = response
             touched_nodes.add(query+m)
         else:
             # update the weight of the edge from r to query (should be negative).
-            res_copy[r][query + m] = -response
+            adj_matrix[r][query + m] = -response
             touched_nodes.add(r)
 
-        cycle = True
+        cycle = None
         num_iters = 0
-        src_set = {r, query}
+        iter_bd = 10
+        # src_set = {r, query}
 
         time_spent_searching = 0.0
 
-        while cycle and num_iters < 2:
+        while cycle and num_iters < iter_bd:
             num_iters += 1
 
             st = time.time()
-            cycle = spfa_simple(res_copy, src_set)
+            # depth_limit = 10
+            # cycle = spfa_simple(res_copy, src_set, depth_limit)
+            b = 5
+            d = 10
+            beamwidth = 50
+
+            # We have to start searching from the paper when response is 0,
+            # and start from the reviewer when response is 1
+            if response == 0:
+                cycle = cycle_beam(adj_matrix, query, b, d, beamwidth)
+            elif response == 1:
+                cycle = cycle_beam(adj_matrix, r, b, d, beamwidth)
+
             time_spent_searching += time.time() - st
 
             if cycle is not None:
                 cycle_set = set(cycle)
-                src_set |= cycle_set
                 touched_nodes |= cycle_set
 
                 # The cycle goes backward in the residual graph. Thus, we need to assign the i-1'th paper to the i'th
@@ -1307,38 +1319,33 @@ class GreedyMaxQueryModel(QueryModel):
                         # We are assigning a non-dummy paper to the reviewer curr_rev
                         updated_alloc[curr_rev, paper_to_assign] = 1
                         # Reverse the edge and negate its weight
-                        res_copy[paper_to_assign + m][curr_rev] = -res_copy[curr_rev][paper_to_assign + m]
-                        del res_copy[curr_rev][paper_to_assign + m]
+                        adj_matrix[paper_to_assign + m][curr_rev] = -adj_matrix[curr_rev][paper_to_assign + m]
+                        adj_matrix[curr_rev][paper_to_assign + m] = np.inf
 
                     if paper_to_drop < n:
                         # We are dropping a non-dummy paper from the reviewer curr_rev
                         updated_alloc[curr_rev, paper_to_drop] = 0
                         # Reverse the edge and negate its weight
-                        res_copy[curr_rev][paper_to_drop + m] = -res_copy[paper_to_drop + m][curr_rev]
-                        del res_copy[paper_to_drop + m][curr_rev]
+                        adj_matrix[curr_rev][paper_to_drop + m] = -adj_matrix[paper_to_drop + m][curr_rev]
+                        adj_matrix[paper_to_drop + m][curr_rev] = np.inf
 
                     # Update the residual graph if we have dropped the last paper
                     # We need to make it so that curr_rev can't receive the dummy paper anymore.
                     num_papers = np.sum(updated_alloc[curr_rev, :])
                     if num_papers < 0.1:
-                        try:
-                            del res_copy[curr_rev][n + m]
-                        except KeyError:
-                            pass
+                        adj_matrix[curr_rev][n + m] = np.inf
+
                     # If we have a paper assigned, we can ASSIGN the dummy
                     else:
-                        res_copy[curr_rev][n + m] = 0
+                        adj_matrix[curr_rev][n + m] = 0
 
                     # We drop the edge to the dummy paper here if we have assigned the reviewer up to their max.
                     # So we make it so they can't give away the dummy paper (and thus receive a new assignment).
                     if num_papers > loads[curr_rev] - .1:
-                        try:
-                            del res_copy[n + m][curr_rev]
-                        except KeyError:
-                            pass
+                        adj_matrix[n + m][curr_rev] = np.inf
                     else:
                         # They can still give away the dummy
-                        res_copy[n + m][curr_rev] = 0
+                        adj_matrix[n + m][curr_rev] = 0
 
                     # Move to the next REVIEWER... not the next vertex in the cycle
                     ctr += 2
@@ -1356,25 +1363,25 @@ class GreedyMaxQueryModel(QueryModel):
         for node in touched_nodes:
             if node < m:
                 # It's a rev
-                local_residual_fwd_neighbors[node] = dict()
+                adj_matrix[node, :] = np.inf
                 num_papers = np.sum(curr_alloc[node, :])
                 if num_papers > 0.1:
-                    local_residual_fwd_neighbors[node][n + m] = 0
-                elif (n+m) in local_residual_fwd_neighbors[node]:
-                    del local_residual_fwd_neighbors[node][n + m]
+                    adj_matrix[node][n + m] = 0
+                elif adj_matrix[node][n+m] < np.inf:
+                    adj_matrix[node][n + m] = np.inf
                 if num_papers < loads[node] - .1:
-                    local_residual_fwd_neighbors[n + m][node] = 0
-                elif node in local_residual_fwd_neighbors[n + m]:
-                    del local_residual_fwd_neighbors[n + m][node]
+                    adj_matrix[n + m][node] = 0
+                elif adj_matrix[n + m][node] < np.inf:
+                    adj_matrix[n + m][node] = np.inf
 
                 for paper in range(n):
                     if curr_alloc[node, paper] > .5:
-                        local_residual_fwd_neighbors[paper + m][node] = v_tilde[node, paper]
-                        if (paper+m) in local_residual_fwd_neighbors[node]:
-                            del local_residual_fwd_neighbors[node][paper+m]
+                        adj_matrix[paper + m][node] = v_tilde[node, paper]
+                        if adj_matrix[node][paper+m] < np.inf:
+                            adj_matrix[node][paper+m] = np.inf
                     else:
-                        local_residual_fwd_neighbors[node][paper + m] = -v_tilde[node, paper]
-                        if node in local_residual_fwd_neighbors[paper+m]:
-                            del local_residual_fwd_neighbors[paper+m][node]
+                        adj_matrix[node][paper + m] = -v_tilde[node, paper]
+                        if adj_matrix[paper+m][node] < np.inf:
+                            adj_matrix[paper+m][node] = np.inf
 
         return updated_expected_value, time_spent_searching

@@ -11,7 +11,7 @@ import sys
 
 def basic_baselines(dset_name, obj):
     if obj == "USW":
-        solver = solve_usw
+        solver = solve_usw_gurobi
     elif obj == "ESW":
         solver = solve_esw
     else:
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     obj = args.obj
     num_procs=args.num_procs
 
-    query_model(dset_name, obj, lamb, seed, data_dir, num_procs)
-    # basic_baselines("cvpr", "USW")
+    # query_model(dset_name, obj, lamb, seed, data_dir, num_procs)
+    basic_baselines("cvpr18", "USW")
     # final_solver_swarm(dset_name, obj, lamb, seed, data_dir)
 

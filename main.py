@@ -18,9 +18,17 @@ def basic_baselines(dset_name, obj):
         print("obj must be USW or ESW")
         sys.exit(0)
 
+    print("Dataset: %s" % dset_name)
+
     tpms, true_bids, covs, loads = load_dset(dset_name)
     print("Solving for max E[%s] using TPMS scores" % obj)
     expected_obj, alloc = solver(tpms, covs, loads)
+
+    os.makedirs(os.path.join("saved_init_expected_usw"), exist_ok=True)
+    os.makedirs(os.path.join("saved_init_max_usw_soln"), exist_ok=True)
+
+    np.save(os.path.join("saved_init_expected_usw", dset_name), expected_obj)
+    np.save(os.path.join("saved_init_max_usw_soln", dset_name), alloc)
 
     true_obj = 0
     if obj == "USW":

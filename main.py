@@ -75,9 +75,9 @@ def query_model(dset_name, obj, lamb, seed, data_dir, query_model_type):
     run_experiment(dset_name, query_model, seed, lamb, data_dir)
 
 
-def final_solver_swarm(dset_name, obj, lamb, seed, data_dir):
+def final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model):
     tpms, true_bids, covs, loads = load_dset(dset_name, data_dir)
-    v_tilde = np.load(os.path.join(data_dir, "v_tilde_%s.npy" % dset_name))
+    v_tilde = np.load(os.path.join(data_dir, "v_tildes", "v_tilde_%s_%s_%d.npy" % (dset_name, query_model, seed)))
     if obj == "USW":
         solver = solve_usw_gurobi
     else:
@@ -90,6 +90,12 @@ def final_solver_swarm(dset_name, obj, lamb, seed, data_dir):
     # print("Number of bids issued: %d" % total_bids)
     print("E[%s] from using this query model: %.2f" % (obj, expected_obj))
     print("True %s from using this model: %.2f" % (obj, true_obj))
+
+    with open(os.path.join(data_dir, "v_tildes", "expected_obj_%s_%s_%d" % (dset_name, query_model, seed)), 'w') as f:
+        f.write(expected_obj)
+
+    with open(os.path.join(data_dir, "v_tildes", "true_obj_%s_%s_%d" % (dset_name, query_model, seed)), 'w') as f:
+        f.write(true_obj)
 
 
 def parse_args():
@@ -115,7 +121,7 @@ if __name__ == "__main__":
     num_procs = args.num_procs
     query_model_type = args.query_model
 
-    query_model(dset_name, obj, lamb, seed, data_dir, query_model_type)
+    # query_model(dset_name, obj, lamb, seed, data_dir, query_model_type)
     # basic_baselines("cvpr18", "USW")
-    # final_solver_swarm(dset_name, obj, lamb, seed, data_dir)
+    final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model_type)
 

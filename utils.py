@@ -6,12 +6,12 @@ import os
 from queue import Queue
 
 
-def load_dset(dname, data_dir="."):
+def load_dset(dname, seed, data_dir="."):
     tpms = np.load(os.path.join(data_dir, "data", dname, "scores.npy"))
     covs = np.load(os.path.join(data_dir, "data", dname, "covs.npy"))
     loads = np.load(os.path.join(data_dir, "data", dname, "loads.npy"))
 
-    np.random.seed(31415)
+    np.random.seed(seed)
 
     # Sample the "true" bids that would occur if reviewers bid on all papers.
     noisy_tpms = tpms + np.random.randn(*tpms.shape) * 0.1

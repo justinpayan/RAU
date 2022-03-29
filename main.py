@@ -46,8 +46,8 @@ def basic_baselines(dset_name, obj):
     print("Optimal %s: %.2f" % (obj, opt))
 
 
-def query_model(dset_name, obj, lamb, seed, data_dir, num_procs):
-    tpms, true_bids, covs, loads = load_dset(dset_name, data_dir)
+def query_model(dset_name, obj, lamb, seed, data_dir, query_model_type):
+    tpms, true_bids, covs, loads = load_dset(dset_name, seed, data_dir)
     if obj == "USW":
         # For now, don't use a solver, we can just expect to load the starting solutions from disk,
         # and at the end we will write out the v_tilde for input to gurobi separately.
@@ -56,19 +56,23 @@ def query_model(dset_name, obj, lamb, seed, data_dir, num_procs):
     else:
         print("USW is the only allowed objective right now")
         sys.exit(0)
-    # query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name)
-    query_model = GreedyMaxQueryModelParallel(tpms, covs, loads, solver, dset_name, data_dir, num_procs)
-    # query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
-    # query_model = SuperStarQueryModel(tpms, dset_name)
-    # query_model = RandomQueryModel(tpms)
-    expected_obj, alloc, total_bids = run_experiment(dset_name, query_model, solver, seed, lamb, data_dir, num_procs)
 
-    true_obj = np.sum(alloc * true_bids)
+    if query_model_type == "greedymax":
+        query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name)
+        # query_model = GreedyMaxQueryModelParallel(tpms, covs, loads, solver, dset_name, data_dir, num_procs)
+    elif query_model_type == "var":
+        query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
+    elif query_model_type == "random":
+        query_model = RandomQueryModel(tpms, dset_name)
+    elif query_model_type == "superstar":
+        query_model = SuperStarQueryModel(tpms, dset_name)
+    elif query_model_type == "tpms":
+        query_model = TpmsQueryModel(tpms, dset_name)
+    elif query_model_type == "uncertainty":
+        pass
+        # query_model = UncertaintyQueryModel(tpms, dset_name)
 
-    print("Number of reviewers: %d" % loads.shape[0])
-    print("Number of bids issued: %d" % total_bids)
-    print("E[%s] from using this query model: %.2f" % (obj, expected_obj))
-    print("True %s from using this model: %.2f" % (obj, true_obj))
+    run_experiment(dset_name, query_model, seed, lamb, data_dir)
 
 
 def final_solver_swarm(dset_name, obj, lamb, seed, data_dir):
@@ -96,6 +100,7 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=31415)
     parser.add_argument("--obj", type=str, default="USW")
     parser.add_argument("--num_procs", type=int, default=1)
+    parser.add_argument("--query_model", type=str, default="random")
 
     return parser.parse_args()
 
@@ -107,9 +112,10 @@ if __name__ == "__main__":
     lamb = args.lamb
     seed = args.seed
     obj = args.obj
-    num_procs=args.num_procs
+    num_procs = args.num_procs
+    query_model_type = args.query_model
 
-    # query_model(dset_name, obj, lamb, seed, data_dir, num_procs)
-    basic_baselines("cvpr18", "USW")
+    query_model(dset_name, obj, lamb, seed, data_dir, query_model_type)
+    # basic_baselines("cvpr18", "USW")
     # final_solver_swarm(dset_name, obj, lamb, seed, data_dir)
 

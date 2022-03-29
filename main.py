@@ -92,10 +92,10 @@ def final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model):
     print("True %s from using this model: %.2f" % (obj, true_obj))
 
     with open(os.path.join(data_dir, "v_tildes", "expected_obj_%s_%s_%d" % (dset_name, query_model, seed)), 'w') as f:
-        f.write(expected_obj)
+        f.write(str(expected_obj))
 
     with open(os.path.join(data_dir, "v_tildes", "true_obj_%s_%s_%d" % (dset_name, query_model, seed)), 'w') as f:
-        f.write(true_obj)
+        f.write(str(true_obj))
 
 
 def parse_args():

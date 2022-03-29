@@ -739,9 +739,9 @@ class VarianceReductionQueryModel(QueryModel):
 #             adj_matrix[r][query + m] = -response
 #             touched_nodes.add(r)
 #
-#         cycle = None
+#         cycle = True
 #         num_iters = 0
-#         iter_bd = 10
+#         iter_bd = 15
 #         # src_set = {r, query}
 #
 #         time_spent_searching = 0.0
@@ -752,9 +752,9 @@ class VarianceReductionQueryModel(QueryModel):
 #             st = time.time()
 #             # depth_limit = 10
 #             # cycle = spfa_simple(res_copy, src_set, depth_limit)
-#             b = 10
+#             b = 3
 #             d = 10
-#             beamwidth = 100
+#             beamwidth = 10
 #
 #             # We have to start searching from the paper when response is 0,
 #             # and start from the reviewer when response is 1

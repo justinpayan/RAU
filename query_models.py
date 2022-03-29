@@ -852,7 +852,7 @@ class VarianceReductionQueryModel(QueryModel):
 
 
 class GreedyMaxQueryModel(QueryModel):
-    def __init__(self, tpms, covs, loads, solver, dset_name):
+    def __init__(self, tpms, covs, loads, solver, dset_name, data_dir):
         super().__init__(tpms, dset_name)
         self.solver = solver
         self.covs = covs
@@ -862,16 +862,16 @@ class GreedyMaxQueryModel(QueryModel):
 
         print("Loading/computing optimal initial solution")
         try:
-            self.curr_expected_value = np.load(os.path.join("saved_init_expected_usw", dset_name + ".npy"))
-            self.curr_alloc = np.load(os.path.join("saved_init_max_usw_soln", dset_name + ".npy"))
+            self.curr_expected_value = np.load(os.path.join(data_dir, "saved_init_expected_usw", dset_name + ".npy"))
+            self.curr_alloc = np.load(os.path.join(data_dir, "saved_init_max_usw_soln", dset_name + ".npy"))
         except FileNotFoundError:
             print("Recomputing")
-            os.makedirs("saved_init_expected_usw", exist_ok=True)
-            os.makedirs("saved_init_max_usw_soln", exist_ok=True)
+            os.makedirs(os.path.join(data_dir, "saved_init_expected_usw"), exist_ok=True)
+            os.makedirs(os.path.join(data_dir, "saved_init_max_usw_soln"), exist_ok=True)
 
             self.curr_expected_value, self.curr_alloc = self.solver(self.v_tilde, self.covs, self.loads)
-            np.save(os.path.join("saved_init_expected_usw", dset_name), self.curr_expected_value)
-            np.save(os.path.join("saved_init_max_usw_soln", dset_name), self.curr_alloc)
+            np.save(os.path.join(data_dir, "saved_init_expected_usw", dset_name), self.curr_expected_value)
+            np.save(os.path.join(data_dir, "saved_init_max_usw_soln", dset_name), self.curr_alloc)
 
         # Bipartite graph, with reviewers on left side, papers on right. There is a dummy paper which we will
         # assign to all reviewers with remaining review load.
@@ -1090,7 +1090,7 @@ class GreedyMaxQueryModel(QueryModel):
 
 
 class SuperStarGreedyMaxQueryModel(QueryModel):
-    def __init__(self, tpms, covs, loads, solver, dset_name, k):
+    def __init__(self, tpms, covs, loads, solver, dset_name, data_dir, k):
         super().__init__(tpms, dset_name)
         self.solver = solver
         self.covs = covs
@@ -1101,16 +1101,16 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
 
         print("Loading/computing optimal initial solution")
         try:
-            self.curr_expected_value = np.load(os.path.join("saved_init_expected_usw", dset_name + ".npy"))
-            self.curr_alloc = np.load(os.path.join("saved_init_max_usw_soln", dset_name + ".npy"))
+            self.curr_expected_value = np.load(os.path.join(data_dir, "saved_init_expected_usw", dset_name + ".npy"))
+            self.curr_alloc = np.load(os.path.join(data_dir, "saved_init_max_usw_soln", dset_name + ".npy"))
         except FileNotFoundError:
             print("Recomputing")
-            os.makedirs("saved_init_expected_usw", exist_ok=True)
-            os.makedirs("saved_init_max_usw_soln", exist_ok=True)
+            os.makedirs(os.path.join(data_dir, "saved_init_expected_usw"), exist_ok=True)
+            os.makedirs(os.path.join(data_dir, "saved_init_max_usw_soln"), exist_ok=True)
 
             self.curr_expected_value, self.curr_alloc = self.solver(self.v_tilde, self.covs, self.loads)
-            np.save(os.path.join("saved_init_expected_usw", dset_name), self.curr_expected_value)
-            np.save(os.path.join("saved_init_max_usw_soln", dset_name), self.curr_alloc)
+            np.save(os.path.join(data_dir, "saved_init_expected_usw", dset_name), self.curr_expected_value)
+            np.save(os.path.join(data_dir, "saved_init_max_usw_soln", dset_name), self.curr_alloc)
 
         # Bipartite graph, with reviewers on left side, papers on right. There is a dummy paper which we will
         # assign to all reviewers with remaining review load.

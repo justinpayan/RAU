@@ -1,14 +1,14 @@
 #! /bin/bash
 
-#SBATCH --job-name=repeated_exps_cvpr_tpms
-#SBATCH --output=/mnt/nfs/scratch1/jpayan/repeated_exps_cvpr_tpms.out
-#SBATCH --error=/mnt/nfs/scratch1/jpayan/repeated_exps_cvpr_tpms.err
+#SBATCH --job-name=repeated_exps_midl_tpms
+#SBATCH --output=/mnt/nfs/scratch1/jpayan/repeated_exps_midl_tpms.out
+#SBATCH --error=/mnt/nfs/scratch1/jpayan/repeated_exps_midl_tpms.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --time=00-10:00:00
 #SBATCH --partition=defq
 
-DATASET=cvpr
+DATASET=midl
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
 QUERY_MODEL=tpms
 

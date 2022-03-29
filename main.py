@@ -107,6 +107,7 @@ def parse_args():
     parser.add_argument("--obj", type=str, default="USW")
     parser.add_argument("--num_procs", type=int, default=1)
     parser.add_argument("--query_model", type=str, default="random")
+    parser.add_argument("--mode", type=str)
 
     return parser.parse_args()
 
@@ -120,8 +121,12 @@ if __name__ == "__main__":
     obj = args.obj
     num_procs = args.num_procs
     query_model_type = args.query_model
+    mode = args.mode
 
-    # query_model(dset_name, obj, lamb, seed, data_dir, query_model_type)
-    # basic_baselines("cvpr18", "USW")
-    final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model_type)
+    if mode == "query_exps":
+        query_model(dset_name, obj, lamb, seed, data_dir, query_model_type)
+    elif mode == "basic_baselines":
+        basic_baselines(dset_name, seed, data_dir, obj)
+    elif mode == "final_solver":
+        final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model_type)
 

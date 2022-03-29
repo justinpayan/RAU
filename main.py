@@ -9,7 +9,7 @@ import argparse
 import sys
 
 
-def basic_baselines(dset_name, obj):
+def basic_baselines(dset_name, seed, data_dir, obj):
     if obj == "USW":
         solver = solve_usw_gurobi
     elif obj == "ESW":
@@ -20,7 +20,7 @@ def basic_baselines(dset_name, obj):
 
     print("Dataset: %s" % dset_name)
 
-    tpms, true_bids, covs, loads = load_dset(dset_name)
+    tpms, true_bids, covs, loads = load_dset(dset_name, seed, data_dir)
     print("Solving for max E[%s] using TPMS scores" % obj)
     expected_obj, alloc = solver(tpms, covs, loads)
 
@@ -76,7 +76,7 @@ def query_model(dset_name, obj, lamb, seed, data_dir, query_model_type):
 
 
 def final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model):
-    tpms, true_bids, covs, loads = load_dset(dset_name, data_dir)
+    tpms, true_bids, covs, loads = load_dset(dset_name, seed, data_dir)
     v_tilde = np.load(os.path.join(data_dir, "v_tildes", "v_tilde_%s_%s_%d.npy" % (dset_name, query_model, seed)))
     if obj == "USW":
         solver = solve_usw_gurobi

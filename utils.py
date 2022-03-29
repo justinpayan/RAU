@@ -13,6 +13,9 @@ def load_dset(dname, seed, data_dir="."):
 
     np.random.seed(seed)
 
+    tpms = np.clip(tpms, 0, np.inf)
+    tpms /= np.max(tpms)
+
     # Sample the "true" bids that would occur if reviewers bid on all papers.
     noisy_tpms = tpms + np.random.randn(*tpms.shape) * 0.1
     noisy_tpms = np.clip(noisy_tpms, 0, 1)

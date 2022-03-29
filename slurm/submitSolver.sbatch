@@ -1,8 +1,8 @@
 #! /bin/bash
 
-#SBATCH --job-name=midl_solver_tpms
-#SBATCH --output=/mnt/nfs/scratch1/jpayan/midl_solver_tpms.out
-#SBATCH --error=/mnt/nfs/scratch1/jpayan/midl_solver_tpms.err
+#SBATCH --job-name=midl_solver_superstar
+#SBATCH --output=/mnt/nfs/scratch1/jpayan/midl_solver_superstar.out
+#SBATCH --error=/mnt/nfs/scratch1/jpayan/midl_solver_superstar.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --nodelist=swarm082
@@ -12,6 +12,6 @@
 
 DATASET=midl
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
-QUERY_MODEL=tpms
+QUERY_MODEL=superstar
 
 ./submitSolver.sh $DATASET $DATA_DIR $QUERY_MODEL

@@ -1,15 +1,15 @@
 #! /bin/bash
 
-#SBATCH --job-name=repeated_exps_cvpr18_superstar
-#SBATCH --output=/mnt/nfs/scratch1/jpayan/repeated_exps_cvpr18_superstar.out
-#SBATCH --error=/mnt/nfs/scratch1/jpayan/repeated_exps_cvpr18_superstar.err
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --time=00-10:00:00
-#SBATCH --partition=defq
-
-DATASET=cvpr18
+SEED=$1
+DATASET=$2
+QUERY_MODEL=$3
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
-QUERY_MODEL=superstar
 
-./repeatedExps.sh $DATASET $DATA_DIR $QUERY_MODEL
+sbatch --job-name=repeated_exps_${DATASET}_${QUERY_MODEL}_${SEED} \
+       --output=/mnt/nfs/scratch1/jpayan/repeated_exps_${DATASET}_${QUERY_MODEL}_${SEED}.out \
+       --error=/mnt/nfs/scratch1/jpayan/repeated_exps_${DATASET}_${QUERY_MODEL}_${SEED}.err \
+       --nodes=1 \
+       --ntasks=1 \
+       --time=05-00:00:00 \
+       --partition=longq \
+       ./repeatedExps.sh $DATASET $DATA_DIR $QUERY_MODEL $SEED

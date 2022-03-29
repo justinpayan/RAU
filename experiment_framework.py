@@ -28,7 +28,7 @@ def run_experiment(dset_name, query_model, seed, lamb, data_dir):
         # For each bid, pick the next paper to query based on the model
         for _ in range(num_bids):
             query = query_model.get_query(r)
-            query_model.update(r, query, true_bids[r, query])
+            query_model.update(r, query, int(true_bids[r, query]))
             print("Next query for reviewer %d was %d" % (r, query))
 
     os.makedirs(os.path.join(data_dir, "v_tildes"), exist_ok=True)

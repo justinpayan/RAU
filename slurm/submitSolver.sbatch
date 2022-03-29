@@ -1,8 +1,8 @@
 #! /bin/bash
 
-#SBATCH --job-name=cvpr_maxusw_solver
-#SBATCH --output=/mnt/nfs/scratch1/jpayan/cvpr_max_usw_solver.out
-#SBATCH --error=/mnt/nfs/scratch1/jpayan/cvpr_max_usw_solver.err
+#SBATCH --job-name=cvpr_solver_tpms
+#SBATCH --output=/mnt/nfs/scratch1/jpayan/cvpr_solver_tpms.out
+#SBATCH --error=/mnt/nfs/scratch1/jpayan/cvpr_solver_tpms.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --nodelist=swarm082
@@ -12,6 +12,6 @@
 
 DATASET=cvpr
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
-QUERY_MODEL=random
+QUERY_MODEL=tpms
 
 ./submitSolver.sh $DATASET $DATA_DIR $QUERY_MODEL

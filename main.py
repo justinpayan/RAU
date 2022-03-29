@@ -121,7 +121,7 @@ if __name__ == "__main__":
     num_procs = args.num_procs
     query_model_type = args.query_model
 
-    # query_model(dset_name, obj, lamb, seed, data_dir, query_model_type)
+    query_model(dset_name, obj, lamb, seed, data_dir, query_model_type)
     # basic_baselines("cvpr18", "USW")
-    final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model_type)
+    # final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model_type)
 

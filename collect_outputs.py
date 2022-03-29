@@ -3,7 +3,7 @@ import os
 
 v_tilde_dir = "/mnt/nfs/scratch1/jpayan/MinimalBidding/v_tildes"
 
-for dset in ["midl"]:
+for dset in ["midl", "cvpr", "cvpr18"]:
     for query_model in ["random"]:
         expected_usw = []
         true_usw = []

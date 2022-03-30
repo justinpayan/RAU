@@ -1,8 +1,8 @@
 #! /bin/bash
 
 #SBATCH --job-name=cvpr_maxexpected
-#SBATCH --output=/mnt/nfs/scratch1/jpayan/cvpr_maxexpected.out
-#SBATCH --error=/mnt/nfs/scratch1/jpayan/cvpr_maxexpected.err
+#SBATCH --output=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding/cvpr_maxexpected.out
+#SBATCH --error=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding/cvpr_maxexpected.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --time=00-01:00:00

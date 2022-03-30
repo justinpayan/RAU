@@ -51,7 +51,11 @@ def add_constrs_to_model(m, x, covs, loads):
     papers = range(covs.shape[0])
     revs = range(loads.shape[0])
     m.addConstrs((x.sum(paper, '*') == covs[paper] for paper in papers), 'covs')  # Paper coverage constraints
-    m.addConstrs((x.sum('*', rev) <= loads[rev] for rev in revs), 'loads')  # Reviewer load constraints
+    total_demand = np.sum(covs)
+    max_num_papers_per_rev = math.ceil(total_demand/loads.shape[0])
+    min_num_papers_per_rev = math.floor(total_demand/loads.shape[0])
+    m.addConstrs((x.sum('*', rev) <= max_num_papers_per_rev for rev in revs), 'loads_ub')  # Reviewer load constraints
+    m.addConstrs((x.sum('*', rev) >= min_num_papers_per_rev for rev in revs), 'loads_lb')  # Reviewer load constraints
 
 
 def convert_to_mat(m, num_papers, num_revs):

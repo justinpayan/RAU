@@ -1,6 +1,8 @@
 
 from experiment_framework import run_experiment
 from query_models import *
+from collections import Counter
+import matplotlib.pyplot as plt
 # from solve_esw import solve_esw
 from solve_usw import solve_usw, solve_usw_gurobi
 from utils import *
@@ -12,10 +14,8 @@ import sys
 def basic_baselines(dset_name, seed, data_dir, obj):
     if obj == "USW":
         solver = solve_usw_gurobi
-    elif obj == "ESW":
-        solver = solve_esw
     else:
-        print("obj must be USW or ESW")
+        print("obj must be USW")
         sys.exit(0)
 
     print("Dataset: %s" % dset_name)
@@ -27,23 +27,28 @@ def basic_baselines(dset_name, seed, data_dir, obj):
     os.makedirs(os.path.join("saved_init_expected_usw"), exist_ok=True)
     os.makedirs(os.path.join("saved_init_max_usw_soln"), exist_ok=True)
 
-    np.save(os.path.join("saved_init_expected_usw", dset_name), expected_obj)
-    np.save(os.path.join("saved_init_max_usw_soln", dset_name), alloc)
+    np.save(os.path.join("saved_init_expected_usw", "%s_%d" % (dset_name, seed)), expected_obj)
+    np.save(os.path.join("saved_init_max_usw_soln", "%s_%d" % (dset_name, seed)), alloc)
 
     true_obj = 0
     if obj == "USW":
         true_obj = np.sum(alloc * true_bids)
-    elif obj == "ESW":
-        true_obj = np.min(np.sum(alloc * true_bids, axis=0))
 
     print("Solving for max %s using true bids" % obj)
-    opt, _ = solver(true_bids, covs, loads)
+    opt, opt_alloc = solver(true_bids, covs, loads)
+
+    np.save(os.path.join("saved_init_expected_usw", "%s_%d_opt" % (dset_name, seed)), opt)
+    np.save(os.path.join("saved_init_max_usw_soln", "%s_%d_opt" % (dset_name, seed)), opt_alloc)
 
     print("\n*******************\n*******************\n*******************\n")
     print("Stats for ", dset_name)
     print("E[%s] from using TPMS scores: %.2f" % (obj, expected_obj))
     print("True %s from using TPMS scores: %.2f" % (obj, true_obj))
     print("Optimal %s: %.2f" % (obj, opt))
+    print("Min number of papers per reviewer (init): %d" % np.min(np.sum(alloc, axis=1)))
+    print("Max number of papers per reviewer (init): %d" % np.max(np.sum(alloc, axis=1)))
+    print("Min number of papers per reviewer (opt): %d" % np.min(np.sum(opt_alloc, axis=1)))
+    print("Max number of papers per reviewer (opt): %d" % np.max(np.sum(opt_alloc, axis=1)))
 
 
 def query_model(dset_name, obj, lamb, seed, data_dir, query_model_type):
@@ -75,6 +80,18 @@ def query_model(dset_name, obj, lamb, seed, data_dir, query_model_type):
         # query_model = UncertaintyQueryModel(tpms, dset_name)
 
     run_experiment(dset_name, query_model, seed, lamb, data_dir)
+
+
+def check_stats(dset_name, data_dir):
+    bid_cts = []
+    for seed in range(10):
+        tpms, true_bids, covs, loads = load_dset(dset_name, seed, data_dir)
+        num_bids_per_rev = np.sum(true_bids, axis=1).tolist()
+        bid_cts.extend(num_bids_per_rev)
+    plt.hist(bid_cts, density=True, bins=40)
+    plt.ylabel("Probability Density")
+    plt.xlabel("Number of Acceptable Papers")
+    plt.savefig("densplotnumbidsperrev_%s" % dset_name)
 
 
 def final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model):
@@ -131,4 +148,6 @@ if __name__ == "__main__":
         basic_baselines(dset_name, seed, data_dir, obj)
     elif mode == "final_solver":
         final_solver_swarm(dset_name, obj, lamb, seed, data_dir, query_model_type)
+    elif mode == "check_stats":
+        check_stats(dset_name, data_dir)
 

@@ -52,8 +52,12 @@ def add_constrs_to_model(m, x, covs, loads):
     revs = range(loads.shape[0])
     m.addConstrs((x.sum(paper, '*') == covs[paper] for paper in papers), 'covs')  # Paper coverage constraints
     total_demand = np.sum(covs)
+    print("Total demand: %d" % total_demand)
+    print("Number of revs: %d" % loads.shape[0])
     max_num_papers_per_rev = math.ceil(total_demand/loads.shape[0])
     min_num_papers_per_rev = math.floor(total_demand/loads.shape[0])
+    print("Max num papers per rev: %d" % max_num_papers_per_rev)
+    print("Min num papers per rev: %d" % min_num_papers_per_rev)
     m.addConstrs((x.sum('*', rev) <= max_num_papers_per_rev for rev in revs), 'loads_ub')  # Reviewer load constraints
     m.addConstrs((x.sum('*', rev) >= min_num_papers_per_rev for rev in revs), 'loads_lb')  # Reviewer load constraints
 

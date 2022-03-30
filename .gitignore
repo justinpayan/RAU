@@ -1,6 +1,10 @@
 data/cvpr/*
 data/midl/*
 data/cvpr18/*
+*.npy
+v_tildes/
+saved_init_max_usw_soln/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,17 +1,17 @@
 #! /bin/bash
 
-#SBATCH --job-name=cvpr18_solver_superstar
-#SBATCH --output=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding/cvpr18_solver_superstar.out
-#SBATCH --error=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding/cvpr18_solver_superstar.err
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --nodelist=swarm082
-#SBATCH --mem=10G
-#SBATCH --time=00-10:00:00
-#SBATCH --partition=defq
-
-DATASET=cvpr18
+DATASET=$1
+QUERY_MODEL=$2
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
-QUERY_MODEL=superstar
+LOG_DIR=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding
 
-./submitSolver.sh $DATASET $DATA_DIR $QUERY_MODEL
+sbatch --job-name=solver_${DATASET}_${QUERY_MODEL}_${SEED} \
+       --output=${LOG_DIR}/solver_${DATASET}_${QUERY_MODEL}_${SEED}.out \
+       --error=${LOG_DIR}/solver_${DATASET}_${QUERY_MODEL}_${SEED}.err \
+       --nodes=1 \
+       --ntasks=1 \
+       --nodelist=swarm082 \
+       --mem=30G \
+       --time=00-10:00:00 \
+       --partition=defq \
+       ./submitSolver.sh $DATASET $DATA_DIR $QUERY_MODEL

@@ -13,4 +13,4 @@ sbatch --job-name=repeated_baselines_${DATASET}_${SEED} \
        --nodelist=swarm082 \
        --time=00-10:00:00 \
        --partition=defq \
-       ./repeatedExps.sh $DATASET $DATA_DIR $SEED
+       ./repeatedBaselines.sh $DATASET $DATA_DIR $SEED

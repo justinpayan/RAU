@@ -24,11 +24,11 @@ def basic_baselines(dset_name, seed, data_dir, obj):
     print("Solving for max E[%s] using TPMS scores" % obj)
     expected_obj, alloc = solver(tpms, covs, loads)
 
-    os.makedirs(os.path.join("saved_init_expected_usw"), exist_ok=True)
-    os.makedirs(os.path.join("saved_init_max_usw_soln"), exist_ok=True)
+    os.makedirs(os.path.join(data_dir, "saved_init_expected_usw"), exist_ok=True)
+    os.makedirs(os.path.join(data_dir, "saved_init_max_usw_soln"), exist_ok=True)
 
-    np.save(os.path.join("saved_init_expected_usw", "%s_%d" % (dset_name, seed)), expected_obj)
-    np.save(os.path.join("saved_init_max_usw_soln", "%s_%d" % (dset_name, seed)), alloc)
+    np.save(os.path.join(data_dir, "saved_init_expected_usw", "%s_%d" % (dset_name, seed)), expected_obj)
+    np.save(os.path.join(data_dir, "saved_init_max_usw_soln", "%s_%d" % (dset_name, seed)), alloc)
 
     true_obj = 0
     if obj == "USW":
@@ -37,9 +37,9 @@ def basic_baselines(dset_name, seed, data_dir, obj):
     print("Solving for max %s using true bids" % obj)
     opt, opt_alloc = solver(true_bids, covs, loads)
 
-    np.save(os.path.join("saved_init_expected_usw", "%s_%d_true" % (dset_name, seed)), true_obj)
-    np.save(os.path.join("saved_init_expected_usw", "%s_%d_opt" % (dset_name, seed)), opt)
-    np.save(os.path.join("saved_init_max_usw_soln", "%s_%d_opt" % (dset_name, seed)), opt_alloc)
+    np.save(os.path.join(data_dir, "saved_init_expected_usw", "%s_%d_true" % (dset_name, seed)), true_obj)
+    np.save(os.path.join(data_dir, "saved_init_expected_usw", "%s_%d_opt" % (dset_name, seed)), opt)
+    np.save(os.path.join(data_dir, "saved_init_max_usw_soln", "%s_%d_opt" % (dset_name, seed)), opt_alloc)
 
     print("\n*******************\n*******************\n*******************\n")
     print("Stats for ", dset_name)

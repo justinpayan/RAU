@@ -37,6 +37,7 @@ def basic_baselines(dset_name, seed, data_dir, obj):
     print("Solving for max %s using true bids" % obj)
     opt, opt_alloc = solver(true_bids, covs, loads)
 
+    np.save(os.path.join("saved_init_expected_usw", "%s_%d_true" % (dset_name, seed)), true_obj)
     np.save(os.path.join("saved_init_expected_usw", "%s_%d_opt" % (dset_name, seed)), opt)
     np.save(os.path.join("saved_init_max_usw_soln", "%s_%d_opt" % (dset_name, seed)), opt_alloc)
 

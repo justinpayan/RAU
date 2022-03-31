@@ -1090,7 +1090,7 @@ class GreedyMaxQueryModel(QueryModel):
 
 
 class SuperStarGreedyMaxQueryModel(QueryModel):
-    def __init__(self, tpms, covs, loads, solver, dset_name, data_dir, k):
+    def __init__(self, tpms, covs, loads, solver, dset_name, data_dir, k, b, d, beam_sz, max_iters):
         super().__init__(tpms, dset_name)
         self.solver = solver
         self.covs = covs
@@ -1098,6 +1098,10 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
         self.tpms_orig = tpms.copy()
         self.bids = np.zeros(tpms.shape)
         self.k = k
+        self.b = b
+        self.d = d
+        self.beam_sz = beam_sz
+        self.max_iters = max_iters
 
         print("Loading/computing optimal initial solution")
         try:
@@ -1262,13 +1266,15 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
         #     print("%d: %s" % (rev, np.where(self.curr_alloc[rev, :])[0].tolist()))
 
         cycle = True
-        while cycle:
+        num_iters = 0
+        while cycle and num_iters < self.max_iters:
+            num_iters += 1
             # print("SPFA start")
             # cycle = spfa_adj_matrix(adj_matrix)
             if response == 0:
-                cycle = cycle_beam(adj_matrix, query, 3, 10, 10)
+                cycle = cycle_beam(adj_matrix, query, self.b, self.d, self.beam_sz)
             else:
-                cycle = cycle_beam(adj_matrix, r, 3, 10, 10)
+                cycle = cycle_beam(adj_matrix, r, self.b, self.d, self.beam_sz)
             if cycle is not None:
                 cycle = cycle[::-1]
             # print(cycle)

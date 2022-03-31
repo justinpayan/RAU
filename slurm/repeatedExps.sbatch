@@ -11,6 +11,7 @@ sbatch --job-name=repeated_exps_${DATASET}_${QUERY_MODEL}_${SEED} \
        --error=${LOG_DIR}/repeated_exps_${DATASET}_${QUERY_MODEL}_${SEED}.err \
        --nodes=1 \
        --ntasks=1 \
-       --time=00-10:00:00 \
-       --partition=defq \
+       --mem=10G \
+       --time=06-00:00:00 \
+       --partition=longq \
        ./repeatedExps.sh $DATASET $DATA_DIR $QUERY_MODEL $SEED

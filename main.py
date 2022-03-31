@@ -69,7 +69,7 @@ def query_model(dset_name, obj, lamb, seed, data_dir, query_model_type):
     elif query_model_type == "var":
         query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
     elif query_model_type == "supergreedymax":
-        query_model = SuperStarGreedyMaxQueryModel(tpms, covs, loads, solver, dset_name, data_dir, k=30)
+        query_model = SuperStarGreedyMaxQueryModel(tpms, covs, loads, solver, dset_name, data_dir, k=30, b=3, d=4, beam_sz=10, max_iters=2)
     elif query_model_type == "random":
         query_model = RandomQueryModel(tpms, dset_name)
     elif query_model_type == "superstar":

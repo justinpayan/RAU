@@ -1102,6 +1102,11 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
         self.d = d
         self.beam_sz = beam_sz
         self.max_iters = max_iters
+        total_demand = np.sum(covs)
+        max_num_papers_per_rev = math.ceil(total_demand / loads.shape[0])
+        min_num_papers_per_rev = math.floor(total_demand / loads.shape[0])
+        self.lb = min_num_papers_per_rev
+        self.ub = max_num_papers_per_rev
 
         print("Loading/computing optimal initial solution")
         try:
@@ -1129,9 +1134,9 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
 
         for reviewer in range(self.m):
             num_papers = np.sum(self.curr_alloc[reviewer, :])
-            if num_papers > 0.1:
+            if num_papers > self.lb + .1:
                 adj_matrix[reviewer, self.n + self.m] = 0
-            if num_papers < self.loads[reviewer] - .1:
+            if num_papers < self.ub - .1:
                 adj_matrix[self.n + self.m][reviewer] = 0
             for paper in range(self.n):
                 if self.curr_alloc[reviewer, paper] > .5:
@@ -1213,9 +1218,9 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
 
         for reviewer in range(self.m):
             num_papers = np.sum(self.curr_alloc[reviewer, :])
-            if num_papers > 0.1:
+            if num_papers > self.lb + .1:
                 adj_matrix[reviewer, self.n + self.m] = 0
-            if num_papers < self.loads[reviewer] - .1:
+            if num_papers < self.ub - .1:
                 adj_matrix[self.n + self.m][reviewer] = 0
             for paper in range(self.n):
                 if self.curr_alloc[reviewer, paper] > .5:
@@ -1315,15 +1320,15 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
                     # Update the residual graph if we have dropped the last paper
                     # We need to make it so that curr_rev can't receive the dummy paper anymore.
                     num_papers = np.sum(updated_alloc[curr_rev, :])
-                    if num_papers < 0.1:
+                    if num_papers < self.lb + .1:
                         adj_matrix[curr_rev][self.n + self.m] = np.inf
-                    # If we have a paper assigned, we can ASSIGN the dummy
+                    # If we have a paper assigned (over the lb), we can ASSIGN the dummy
                     else:
                         adj_matrix[curr_rev][self.n + self.m] = 0
 
                     # We drop the edge to the dummy paper here if we have assigned the reviewer up to their max.
                     # So we make it so they can't give away the dummy paper (and thus receive a new assignment).
-                    if num_papers > self.loads[curr_rev] - .1:
+                    if num_papers > self.ub - .1:
                         adj_matrix[self.n + self.m][curr_rev] = np.inf
                     else:
                         # They can still give away the dummy

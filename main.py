@@ -53,7 +53,7 @@ def basic_baselines(dset_name, seed, data_dir, obj):
 
 
 def query_model(dset_name, obj, lamb, seed, data_dir, query_model_type):
-    tpms, true_bids, covs, loads = load_dset(dset_name, seed, data_dir)
+    tpms, true_bids, covs, loads, lb, ub = load_dset(dset_name, seed, data_dir)
     if obj == "USW":
         # For now, don't use a solver, we can just expect to load the starting solutions from disk,
         # and at the end we will write out the v_tilde for input to gurobi separately.

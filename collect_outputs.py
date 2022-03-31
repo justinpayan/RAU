@@ -4,19 +4,23 @@ import os
 data_dir = "/mnt/nfs/scratch1/jpayan/MinimalBidding"
 v_tilde_dir = "/mnt/nfs/scratch1/jpayan/MinimalBidding/v_tildes"
 
+init_true_usw = {}
+opt_usw = {}
+
 for dset in ["midl", "cvpr", "cvpr18"]:
     expected_usw = []
-    init_true_usw = []
-    opt_usw = []
+    init_true_usw_list = []
+    opt_usw_list = []
     for seed in range(10):
         expected_usw.append(np.load(os.path.join(data_dir, "saved_init_expected_usw", "%s_%d.npy" % (dset, seed))))
-        init_true_usw.append(np.load(os.path.join(data_dir, "saved_init_expected_usw", "%s_%d_true.npy" % (dset, seed))))
-        opt_usw.append(np.load(os.path.join(data_dir, "saved_init_expected_usw", "%s_%d_opt.npy" % (dset, seed))))
+        init_true_usw_list.append(np.load(os.path.join(data_dir, "saved_init_expected_usw", "%s_%d_true.npy" % (dset, seed))))
+        opt_usw_list.append(np.load(os.path.join(data_dir, "saved_init_expected_usw", "%s_%d_opt.npy" % (dset, seed))))
 
     print("Dataset: %s, mean/std True (Exp): $%.2f \\pm %.2f$ ($%.2f \\pm %.2f$), OPT: $%.2f \\pm %.2f$"
-          % (dset, np.mean(init_true_usw), np.std(init_true_usw),
-             np.mean(expected_usw), np.std(expected_usw), np.mean(opt_usw), np.std(opt_usw)))
-
+          % (dset, np.mean(init_true_usw_list), np.std(init_true_usw_list),
+             np.mean(expected_usw), np.std(expected_usw), np.mean(opt_usw_list), np.std(opt_usw_list)))
+    init_true_usw[dset] = init_true_usw_list
+    opt_usw[dset] = opt_usw_list
 
 for query_model in ["random", "tpms", "superstar"]:
     for dset in ["midl", "cvpr", "cvpr18"]:
@@ -28,7 +32,7 @@ for query_model in ["random", "tpms", "superstar"]:
                 expected_usw.append(eusw)
             with open(os.path.join(v_tilde_dir, "true_obj_%s_%s_%d" % (dset, query_model, seed)), 'r') as f:
                 tusw = float(f.read().strip())
-                progress = 100.0*(tusw - init_true_usw[seed])/(opt_usw[seed] - init_true_usw[seed])
+                progress = 100.0*(tusw - init_true_usw[dset][seed])/(opt_usw[dset][seed] - init_true_usw[dset][seed])
                 true_usw.append(progress)
         print("Dataset: %s, query_model: %s, mean/std True Progress (Exp): $%.2f\\%% \\pm %.2f\\%%$ ($%.2f \\pm %.2f$)"
               % (dset, query_model, np.mean(true_usw), np.std(true_usw),

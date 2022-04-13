@@ -2,7 +2,7 @@ import random
 from tqdm import tqdm
 
 from utils import *
-
+import time
 
 def run_experiment(dset_name, query_model, seed, lamb, data_dir):
     tpms, true_bids, covs, loads = load_dset(dset_name, seed, data_dir)
@@ -27,9 +27,14 @@ def run_experiment(dset_name, query_model, seed, lamb, data_dir):
 
         # For each bid, pick the next paper to query based on the model
         for _ in range(num_bids):
+            st = time.time()
             query = query_model.get_query(r)
+            # print("time to get query: %s s " % (time.time() - st))
+            st = time.time()
             query_model.update(r, query, int(true_bids[r, query]))
+            # print("update time: %s s" % (time.time() - st))
             print("Next query for reviewer %d was %d" % (r, query))
+            print("Current E[USW] is %s" % query_model.curr_expected_value)
 
     os.makedirs(os.path.join(data_dir, "v_tildes"), exist_ok=True)
 

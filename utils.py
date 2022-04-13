@@ -3,8 +3,13 @@ import math
 import numpy as np
 import os
 
+from itertools import product
 from queue import Queue
+from sortedcontainers import SortedList
+import networkx as nx
 
+
+import time
 
 def load_dset(dname, seed, data_dir="."):
     tpms = np.load(os.path.join(data_dir, "data", dname, "scores.npy"))
@@ -100,34 +105,48 @@ def spfa_simple(fwd_adj_list, src_set):
     return None
 
 
-def spfa_adj_matrix(adj_matrix):
+def spfa_adj_matrix(adj_matrix, src_set):
+    # print(src_set)
+    # print("\n\nStart spfa_adj_matrix")
     dis = [0] * adj_matrix.shape[0]
     pre = [-1] * adj_matrix.shape[0]
-    vertex_queue = Queue()
+    vertex_queue = SortedList()
     vertex_queue_set = set()
-    for v in range(adj_matrix.shape[0]):
-        vertex_queue.put(v)
+    for v in src_set:
+        vertex_queue.add((0, v))
         vertex_queue_set.add(v)
-    i = 0
-    while vertex_queue.qsize():
-        u = vertex_queue.get()
+
+    while len(vertex_queue):
+        # print("vertex_queue: ", vertex_queue)
+        u = vertex_queue.pop()[1]
         vertex_queue_set.remove(u)
+        # print(u)
         for v in np.where(adj_matrix[u, :] < np.inf)[0].tolist():
             if dis[u] + adj_matrix[u][v] < dis[v] and not math.isclose(dis[u] + adj_matrix[u][v], dis[v]):
                 pre[v] = u
                 dis[v] = dis[u] + adj_matrix[u][v]
-                i += 1
-                if i == adj_matrix.shape[0]:
-                    i = 0
+
+                if v in src_set:
                     cyc = detect_cycle(pre)
                     if cyc:
                         return cyc
                 if v not in vertex_queue_set:
-                    vertex_queue.put(v)
+                    vertex_queue.add((-dis[v], v))
                     vertex_queue_set.add(v)
-    cyc = detect_cycle(pre)
-    if cyc:
-        return cyc
+
+    # print("starting to check solution")
+    #
+    # for u in range(adj_matrix.shape[0]):
+    #     if u % 10 == 0:
+    #         print(u/adj_matrix.shape[0])
+    #     for v in np.where(adj_matrix[u, :] < np.inf)[0].tolist():
+    #         if dis[u] + adj_matrix[u][v] < dis[v] and not math.isclose(dis[u] + adj_matrix[u][v], dis[v]):
+    #             print("error, some edge did not get relaxed when it should have")
+
+    for v in src_set:
+        cyc = detect_cycle(pre)
+        if cyc:
+            return cyc
     return None
 
 
@@ -162,6 +181,18 @@ def detect_cycle(pre):
                     # print("cycle detected: ", cycle)
                     return cycle
     return None
+
+
+def reconstruct_path(source, target, predecessors):
+    if source == target:
+        return []
+    prev = predecessors[source, :]
+    curr = prev[target]
+    path = [target, curr]
+    while curr != source:
+        curr = prev[curr]
+        path.append(curr)
+    return list(reversed(path))
 
 
 def cycle_beam(adj_matrix, start_node, b, d, beamwidth):
@@ -242,6 +273,257 @@ def cycle_beam(adj_matrix, start_node, b, d, beamwidth):
         beam = sorted(new_beam, key=lambda x: x[1])[:beamwidth]
 
     return None
+
+
+def decycle(p):
+    final_path = []
+    seen = set()
+    for i in p:
+        final_path.append(i)
+        if i in seen:
+            # back track
+            final_path.pop()
+            while final_path[-1] != i:
+                seen.remove(final_path.pop())
+        seen.add(i)
+    return final_path
+
+
+# Rotate the papers along the cycle. Update the allocation and the shortest paths and the adjacency matrix
+# formulation of the graph.
+# The adjacency matrix is probably not necessary anymore though.
+# We only need to update shortest paths for the node pairs whose shortest paths went through the region.
+# We should maintain the inverted index showing, for each node, which node-pairs have that node on
+# the shortest path.
+def apply_cycle(cycle, adj_matrix, updated_alloc, lb, ub):
+    st = time.time()
+    # update the allocation and residual graph using the cycle
+    m, n = updated_alloc.shape
+
+    # for i in cycle:
+    #     if i < m:
+    #         print("Prior alloc, %d: %s" % (i, np.where(updated_alloc[i, :])))
+    #     print("Prior adj_matrix, %d: %s" % (i, adj_matrix[i, :]))
+
+    # print(cycle)
+
+    # The cycle goes backward in the residual graph. Thus, we need to assign the i-1'th paper to the i'th
+    # reviewer, and unassign the i+1'th paper.
+    ctr = 0 if cycle[0] < m else 1
+    while ctr < len(cycle):
+        paper_to_assign = cycle[(ctr - 1) % len(cycle)] - m
+        paper_to_drop = cycle[(ctr + 1) % len(cycle)] - m
+        curr_rev = cycle[ctr]
+
+        # print("curr_rev, paper_to_assign, paper_to_drop: ", curr_rev, paper_to_assign, paper_to_drop)
+
+        if paper_to_assign < n:
+            # We are assigning a non-dummy paper to the reviewer curr_rev
+            updated_alloc[curr_rev, paper_to_assign] = 1
+            # Reverse the edge and negate its weight
+            adj_matrix[paper_to_assign + m][curr_rev] = -adj_matrix[curr_rev][
+                paper_to_assign + m]
+            adj_matrix[curr_rev][paper_to_assign + m] = np.inf
+
+        if paper_to_drop < n:
+            # We are dropping a non-dummy paper from the reviewer curr_rev
+            updated_alloc[curr_rev, paper_to_drop] = 0
+            # Reverse the edge and negate its weight
+            adj_matrix[curr_rev][paper_to_drop + m] = -adj_matrix[paper_to_drop + m][curr_rev]
+            adj_matrix[paper_to_drop + m][curr_rev] = np.inf
+
+        # Update the residual graph if we have dropped the last paper
+        # We need to make it so that curr_rev can't receive the dummy paper anymore.
+        num_papers = np.sum(updated_alloc[curr_rev, :])
+        if num_papers < lb + .1:
+            adj_matrix[curr_rev][n + m] = np.inf
+        # If we have a paper assigned (over the lb), we can ASSIGN the dummy
+        else:
+            adj_matrix[curr_rev][n + m] = 0
+
+        # We drop the edge to the dummy paper here if we have assigned the reviewer up to their max.
+        # So we make it so they can't give away the dummy paper (and thus receive a new assignment).
+        if num_papers > ub - .1:
+            adj_matrix[n + m][curr_rev] = np.inf
+        else:
+            # They can still give away the dummy
+            adj_matrix[n + m][curr_rev] = 0
+
+        # Move to the next REVIEWER... not the next vertex in the cycle
+        ctr += 2
+
+    # for i in cycle:
+    #     if i < m:
+    #         print("New alloc, %d: %s" % (i, np.where(updated_alloc[i, :])))
+    #     print("New adj_matrix, %d: %s" % (i, adj_matrix[i, :]))
+    return updated_alloc, adj_matrix
+
+def update_shortest_paths(adj_matrix, dists, preds, inverted_idx, region, updated_alloc):
+    # updated_alloc and adj_matrix have been updated. Now we need to update the
+    # dists, preds, inverted_idx
+    # Any shortest path which passes through region will need to be updated
+    # print("updated the alloc and adj_matrix. Updating the dists, preds, inverted_idx")
+    # print("region: %s" % region)
+    update_pairs = set()
+    for u, v in product(region, region):
+        update_pairs |= inverted_idx[(u, v)]
+
+    # print(nx.reconstruct_path(38, 9, preds))
+    # print("update_pairs: %s" % update_pairs)
+    # cycle_edges = set()
+    # for i in range(len(cycle)-1):
+    #     cycle_edges.add((cycle[::-1][i], cycle[::-1][i+1]))
+    # ct = 0
+    # for x, y in update_pairs:
+    #     xy_path = nx.reconstruct_path(x, y, preds)
+    #     # print("%d-%d path: %s" % (x, y, xy_path))
+    #     overlap = False
+    #     for i in range(len(xy_path)-1):
+    #         if (xy_path[i], xy_path[i+1]) in cycle_edges:
+    #             overlap = True
+    #     if overlap:
+    #         ct += 1
+    # print(ct)
+    # for x, y in update_pairs:
+    #     if x in region and y in region:
+    #         print("%d-%d are both in region" % (x, y))
+
+    # We will update these shortest paths by setting all edges within the region to infinity,
+    # and set all u -> v distances to infinity for u and v which previously had a shortest path through the region.
+    # Then you can say that the shortest u -> v path is the min over all v' of u -> v' -> v. When you change the u -> v
+    # distance in this manner, then we will go through and update preds likewise. When we make a full pass without
+    # changing any pairs, we'll be done.
+    for i, j in product(region, region):
+        if i != j:
+            update_pairs.add((i, j))
+
+    adj_matrix_mask = np.zeros(adj_matrix.shape)
+    for i, j in product(region, region):
+        adj_matrix_mask[i, j] = np.inf
+
+    for i, j in update_pairs:
+        dists[i, j] = adj_matrix[i, j] + adj_matrix_mask[i, j]
+        preds[i, j] = i
+
+    # print("Time spent until updating shortest paths: %s s" % (time.time()-st))
+    st = time.time()
+
+    # print("Number of nodes in region: %d" % len(region))
+    # print("Number of pairs of nodes using edges in region in s.p.: %d" % len(update_pairs))
+
+    change = True
+    while change:
+        change = False
+        # print("restart")
+        for i, j in update_pairs:
+            # print(i, j)
+            # print("dist %d to %d, before update: %s" % (i, j, dists[i, j]))
+            # if dists[i,j] < np.inf:
+            #     "path before update: "
+            #     curr = j
+            #     while curr != i:
+            #         print(curr)
+            #         curr = preds[i][curr]
+                # print("%d-%d path, before update: %s" % (i, j, nx.reconstruct_path(i, j, preds)))
+
+            intermed_node = np.argmin(dists[i, :] + dists[:, j])
+            # print("intermed: %d" % intermed_node)
+            new_dist = dists[i, intermed_node] + dists[intermed_node, j]
+            # print(new_dist < dists[i, j])
+            if new_dist < dists[i, j]:
+                # if cycle[0] == 28 and cycle[-1] == 37:
+                #     seen = set()
+                #     print(i)
+                #     print(j)
+                #     print(intermed_node)
+                #     print("path to intermed: ")
+                #     curr = intermed_node
+                #     while curr != i:
+                #         if curr in seen:
+                #             print(curr)
+                #             sys.exit(0)
+                #         seen.add(curr)
+                #         print(curr)
+                #         curr = preds[i][curr]
+                #     print("path from intermed: ")
+                #     curr = j
+                #     seen = set()
+                #     while curr != intermed_node:
+                #         print(curr)
+                #         if curr in seen:
+                #             sys.exit(0)
+                #         seen.add(curr)
+                #         curr = preds[intermed_node][curr]
+                # time.sleep(0.00001)
+                path_to_intermed = reconstruct_path(i, intermed_node, preds)
+                path_from_intermed = reconstruct_path(intermed_node, j, preds)
+                # print("%d-%d path: %s" % (i, intermed_node, path_to_intermed))
+                # print("%d-%d path: %s" % (intermed_node, j, path_from_intermed))
+
+                change = True
+                # Update dists
+                dists[i, j] = new_dist
+                # print("dist %d to %d is now %s" % (i, j, dists[i, j]))
+
+                # If the paths intersect, we need to decycle them. They may intersect in multiple places.
+                # There are no negative cycles outside the region, but we must just not have updated the distance
+                # to that intersecting node yet, so we think that it's faster to go to the other node intermed_node,
+                # which has the intersecting node on the way to intermed_node and on the way from it.
+
+                actual_path = path_to_intermed[:-1] + path_from_intermed
+                actual_path = decycle(actual_path)
+
+                # path_from_intermed_set = set(path_from_intermed)
+                # if set(path_to_intermed[:-1]) & path_from_intermed_set:
+                #     actual_path = []
+                #     curr_idx = 0
+                #     while path_to_intermed[curr_idx] not in path_from_intermed_set:
+                #         actual_path.append(path_to_intermed[curr_idx])
+                #         curr_idx += 1
+                #     curr_idx = 0
+                #     while path_from_intermed[curr_idx]
+                #     actual_path.extend(path_from_intermed)
+                # else:
+                #     actual_path = path_to_intermed[:-1] + path_from_intermed
+
+                # Update preds:
+
+                for i_idx in range(len(actual_path)-1, 0, -1):
+                    preds[i, actual_path[i_idx]] = actual_path[i_idx-1]
+
+                # if actual_path != nx.reconstruct_path(i, j, preds):
+                #     print(actual_path, nx.reconstruct_path(i, j, preds))
+                #     sys.exit(0)
+
+                # pred = j
+                # while pred != intermed_node:
+                #     print(pred)
+                #     preds[i][pred] = preds[intermed_node][pred]
+                #     pred = preds[i][pred]
+                #     print(pred == intermed_node)
+                # print("%d-%d path: %s" % (i, intermed_node, nx.reconstruct_path(i, intermed_node, preds)))
+                # print("%d-%d path: %s" % (intermed_node, j, nx.reconstruct_path(intermed_node, j, preds)))
+                # print("new %d-%d path: %s" % (i, j, nx.reconstruct_path(i, j, preds)))
+        # print("end")
+
+    # print("updated sp's in %s s" % (time.time() - st))
+
+    st = time.time()
+    # print("Done updating dists, preds. Update inverted idx")
+    # Basically, we need to update the inverted index for any node in the region?
+    for (u, v) in product(region, region):
+        inverted_idx[(u, v)] = set()
+
+    for u, v in update_pairs:
+        # print("update path from %d to %d" % (u, v))
+        if preds[u, v] > -999:
+            end = v
+            while end != u:
+                # print(pred)
+                inverted_idx[(preds[u][end], end)].add((u, v))
+                end = preds[u, end]
+
+    return dists, preds, inverted_idx
 
 
 def super_algorithm(g_p, g_r, f, s, bids, h, trade_param, special=False):

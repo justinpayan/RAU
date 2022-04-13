@@ -57,14 +57,14 @@ def query_model(dset_name, obj, lamb, seed, data_dir, query_model_type):
     if obj == "USW":
         # For now, don't use a solver, we can just expect to load the starting solutions from disk,
         # and at the end we will write out the v_tilde for input to gurobi separately.
-        solver = None
+        solver = solve_usw_gurobi
         # solver = solve_usw
     else:
         print("USW is the only allowed objective right now")
         sys.exit(0)
 
     if query_model_type == "greedymax":
-        query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, data_dir, dset_name)
+        query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name, data_dir)
         # query_model = GreedyMaxQueryModelParallel(tpms, covs, loads, solver, dset_name, data_dir, num_procs)
     elif query_model_type == "var":
         query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)

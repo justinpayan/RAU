@@ -7,6 +7,7 @@ from itertools import product
 from queue import Queue
 from sortedcontainers import SortedList
 import networkx as nx
+from floyd_warshall import floyd_warshall_single_core
 
 
 import time
@@ -358,35 +359,217 @@ def apply_cycle(cycle, adj_matrix, updated_alloc, lb, ub):
     #     print("New adj_matrix, %d: %s" % (i, adj_matrix[i, :]))
     return updated_alloc, adj_matrix
 
-def update_shortest_paths(adj_matrix, dists, preds, inverted_idx, region, updated_alloc):
-    # updated_alloc and adj_matrix have been updated. Now we need to update the
-    # dists, preds, inverted_idx
-    # Any shortest path which passes through region will need to be updated
-    # print("updated the alloc and adj_matrix. Updating the dists, preds, inverted_idx")
-    # print("region: %s" % region)
-    update_pairs = set()
-    for u, v in product(region, region):
-        update_pairs |= inverted_idx[(u, v)]
+# def update_shortest_paths(adj_matrix, dists, preds, region):
+#     # updated_alloc and adj_matrix have been updated. Now we need to update the
+#     # dists, preds, inverted_idx
+#     # Any shortest path which passes through region will need to be updated
+#     # print("updated the alloc and adj_matrix. Updating the dists, preds, inverted_idx")
+#     # print("region: %s" % region)
+#     # update_pairs = set()
+#     # for u, v in product(region, region):
+#     #     update_pairs |= inverted_idx[(u, v)]
+#
+#
+#     # Figure out which paths need to be updated by following edges out of the region
+#     update_pairs = set()
+#     for v in region:
+#         all_preds_v = preds[:, v]
+#         # For each idx where the pred is in the region, follow the path forward to get all the pairs we need to update
+#         for i in region:
+#             pred_is_i = np.where(all_preds_v == i)[0].tolist()
+#             # update_pairs |= {(s, v) for s in pred_is_i}
+#             for s in pred_is_i:
+#                 dfs_queue = [v]
+#                 while dfs_queue:
+#                     end = dfs_queue.pop()
+#                     update_pairs.add((s, end))
+#                     # Get the new nodes
+#                     pred_is_end = np.where(preds[s, :] == end)[0].tolist()
+#                     dfs_queue.extend(pred_is_end)
+#
+#
+#     # print(nx.reconstruct_path(38, 9, preds))
+#     # print("update_pairs: %s" % update_pairs)
+#     # cycle_edges = set()
+#     # for i in range(len(cycle)-1):
+#     #     cycle_edges.add((cycle[::-1][i], cycle[::-1][i+1]))
+#     # ct = 0
+#     # for x, y in update_pairs:
+#     #     xy_path = nx.reconstruct_path(x, y, preds)
+#     #     # print("%d-%d path: %s" % (x, y, xy_path))
+#     #     overlap = False
+#     #     for i in range(len(xy_path)-1):
+#     #         if (xy_path[i], xy_path[i+1]) in cycle_edges:
+#     #             overlap = True
+#     #     if overlap:
+#     #         ct += 1
+#     # print(ct)
+#     # for x, y in update_pairs:
+#     #     if x in region and y in region:
+#     #         print("%d-%d are both in region" % (x, y))
+#
+#     # We will update these shortest paths by setting all edges within the region to infinity,
+#     # and set all u -> v distances to infinity for u and v which previously had a shortest path through the region.
+#     # Then you can say that the shortest u -> v path is the min over all v' of u -> v' -> v. When you change the u -> v
+#     # distance in this manner, then we will go through and update preds likewise. When we make a full pass without
+#     # changing any pairs, we'll be done.
+#     for i, j in product(region, region):
+#         if i != j:
+#             update_pairs.add((i, j))
+#
+#     adj_matrix_mask = np.zeros(adj_matrix.shape)
+#     for i, j in product(region, region):
+#         adj_matrix_mask[i, j] = np.inf
+#
+#     for i, j in update_pairs:
+#         dists[i, j] = adj_matrix[i, j] + adj_matrix_mask[i, j]
+#         preds[i, j] = i
+#
+#     # print("Time spent until updating shortest paths: %s s" % (time.time()-st))
+#     st = time.time()
+#
+#     # print("Number of nodes in region: %d" % len(region))
+#     # print("Number of pairs of nodes using edges in region in s.p.: %d" % len(update_pairs))
+#
+#     change = True
+#     while change:
+#         change = False
+#         # print("restart")
+#         for i, j in update_pairs:
+#             print(i, j)
+#             print("dist %d to %d, before update: %s" % (i, j, dists[i, j]))
+#             if dists[i,j] < np.inf:
+#                 "path before update: "
+#                 curr = j
+#                 while curr != i:
+#                     print(curr)
+#                     curr = preds[i][curr]
+#                 # print("%d-%d path, before update: %s" % (i, j, nx.reconstruct_path(i, j, preds)))
+#
+#             intermed_node = np.argmin(dists[i, :] + dists[:, j])
+#             # print("intermed: %d" % intermed_node)
+#             new_dist = dists[i, intermed_node] + dists[intermed_node, j]
+#             # print(new_dist < dists[i, j])
+#             if new_dist < dists[i, j]:
+#                 # if cycle[0] == 28 and cycle[-1] == 37:
+#                 #     seen = set()
+#                 #     print(i)
+#                 #     print(j)
+#                 #     print(intermed_node)
+#                 #     print("path to intermed: ")
+#                 #     curr = intermed_node
+#                 #     while curr != i:
+#                 #         if curr in seen:
+#                 #             print(curr)
+#                 #             sys.exit(0)
+#                 #         seen.add(curr)
+#                 #         print(curr)
+#                 #         curr = preds[i][curr]
+#                 #     print("path from intermed: ")
+#                 #     curr = j
+#                 #     seen = set()
+#                 #     while curr != intermed_node:
+#                 #         print(curr)
+#                 #         if curr in seen:
+#                 #             sys.exit(0)
+#                 #         seen.add(curr)
+#                 #         curr = preds[intermed_node][curr]
+#                 # time.sleep(0.00001)
+#                 path_to_intermed = reconstruct_path(i, intermed_node, preds)
+#                 path_from_intermed = reconstruct_path(intermed_node, j, preds)
+#                 # print("%d-%d path: %s" % (i, intermed_node, path_to_intermed))
+#                 # print("%d-%d path: %s" % (intermed_node, j, path_from_intermed))
+#
+#                 change = True
+#                 # Update dists
+#                 dists[i, j] = new_dist
+#                 # print("dist %d to %d is now %s" % (i, j, dists[i, j]))
+#
+#                 # If the paths intersect, we need to decycle them. They may intersect in multiple places.
+#                 # There are no negative cycles outside the region, but we must just not have updated the distance
+#                 # to that intersecting node yet, so we think that it's faster to go to the other node intermed_node,
+#                 # which has the intersecting node on the way to intermed_node and on the way from it.
+#
+#                 actual_path = path_to_intermed[:-1] + path_from_intermed
+#                 actual_path = decycle(actual_path)
+#
+#                 # path_from_intermed_set = set(path_from_intermed)
+#                 # if set(path_to_intermed[:-1]) & path_from_intermed_set:
+#                 #     actual_path = []
+#                 #     curr_idx = 0
+#                 #     while path_to_intermed[curr_idx] not in path_from_intermed_set:
+#                 #         actual_path.append(path_to_intermed[curr_idx])
+#                 #         curr_idx += 1
+#                 #     curr_idx = 0
+#                 #     while path_from_intermed[curr_idx]
+#                 #     actual_path.extend(path_from_intermed)
+#                 # else:
+#                 #     actual_path = path_to_intermed[:-1] + path_from_intermed
+#
+#                 # Update preds:
+#
+#                 for i_idx in range(len(actual_path)-1, 0, -1):
+#                     preds[i, actual_path[i_idx]] = actual_path[i_idx-1]
+#
+#                 # if actual_path != nx.reconstruct_path(i, j, preds):
+#                 #     print(actual_path, nx.reconstruct_path(i, j, preds))
+#                 #     sys.exit(0)
+#
+#                 # pred = j
+#                 # while pred != intermed_node:
+#                 #     print(pred)
+#                 #     preds[i][pred] = preds[intermed_node][pred]
+#                 #     pred = preds[i][pred]
+#                 #     print(pred == intermed_node)
+#                 # print("%d-%d path: %s" % (i, intermed_node, nx.reconstruct_path(i, intermed_node, preds)))
+#                 # print("%d-%d path: %s" % (intermed_node, j, nx.reconstruct_path(intermed_node, j, preds)))
+#                 # print("new %d-%d path: %s" % (i, j, nx.reconstruct_path(i, j, preds)))
+#         # print("end")
+#
+#     # print("updated sp's in %s s" % (time.time() - st))
+#
+#     return dists, preds
 
-    # print(nx.reconstruct_path(38, 9, preds))
-    # print("update_pairs: %s" % update_pairs)
-    # cycle_edges = set()
-    # for i in range(len(cycle)-1):
-    #     cycle_edges.add((cycle[::-1][i], cycle[::-1][i+1]))
-    # ct = 0
-    # for x, y in update_pairs:
-    #     xy_path = nx.reconstruct_path(x, y, preds)
-    #     # print("%d-%d path: %s" % (x, y, xy_path))
-    #     overlap = False
-    #     for i in range(len(xy_path)-1):
-    #         if (xy_path[i], xy_path[i+1]) in cycle_edges:
-    #             overlap = True
-    #     if overlap:
-    #         ct += 1
-    # print(ct)
-    # for x, y in update_pairs:
-    #     if x in region and y in region:
-    #         print("%d-%d are both in region" % (x, y))
+
+def update_shortest_paths(adj_matrix, dists, preds, region):
+    adj_matrix_mask = np.zeros(adj_matrix.shape)
+    for i, j in product(region, region):
+        if i != j:
+            adj_matrix_mask[i, j] = np.inf
+
+    dists, preds = floyd_warshall_single_core(adj_matrix + adj_matrix_mask)
+    preds = preds.astype(np.int32)
+
+    return dists, preds
+
+
+
+
+def update_shortest_paths_keeping_region_edges(adj_matrix, dists, preds, region):
+    print("Starting update sp's")
+    print(adj_matrix)
+    print(dists)
+    print(preds)
+    print(region)
+
+    # Figure out which paths need to be updated by following edges out of the region
+    update_pairs = set()
+    for v in region:
+        all_preds_v = preds[:, v]
+        # For each idx where the pred is in the region, follow the path forward to get all the pairs we need to update
+        for i in region:
+            pred_is_i = np.where(all_preds_v == i)[0].tolist()
+            # update_pairs |= {(s, v) for s in pred_is_i}
+            for s in pred_is_i:
+                dfs_queue = [v]
+                while dfs_queue:
+                    end = dfs_queue.pop()
+                    update_pairs.add((s, end))
+                    # Get the new nodes
+                    pred_is_end = np.where(preds[s, :] == end)[0].tolist()
+                    dfs_queue.extend(pred_is_end)
+
+    print("Update pairs: ", sorted(update_pairs))
 
     # We will update these shortest paths by setting all edges within the region to infinity,
     # and set all u -> v distances to infinity for u and v which previously had a shortest path through the region.
@@ -397,13 +580,16 @@ def update_shortest_paths(adj_matrix, dists, preds, inverted_idx, region, update
         if i != j:
             update_pairs.add((i, j))
 
-    adj_matrix_mask = np.zeros(adj_matrix.shape)
-    for i, j in product(region, region):
-        adj_matrix_mask[i, j] = np.inf
+    # adj_matrix_mask = np.zeros(adj_matrix.shape)
+    # for i, j in product(region, region):
+    #     adj_matrix_mask[i, j] = np.inf
 
     for i, j in update_pairs:
-        dists[i, j] = adj_matrix[i, j] + adj_matrix_mask[i, j]
-        preds[i, j] = i
+        dists[i, j] = adj_matrix[i, j]
+        if adj_matrix[i, j] < np.inf:
+            preds[i, j] = i
+        else:
+            preds[i, j] = -9999
 
     # print("Time spent until updating shortest paths: %s s" % (time.time()-st))
     st = time.time()
@@ -416,54 +602,30 @@ def update_shortest_paths(adj_matrix, dists, preds, inverted_idx, region, update
         change = False
         # print("restart")
         for i, j in update_pairs:
-            # print(i, j)
-            # print("dist %d to %d, before update: %s" % (i, j, dists[i, j]))
-            # if dists[i,j] < np.inf:
-            #     "path before update: "
-            #     curr = j
-            #     while curr != i:
-            #         print(curr)
-            #         curr = preds[i][curr]
-                # print("%d-%d path, before update: %s" % (i, j, nx.reconstruct_path(i, j, preds)))
+            print(i, j)
+            print("dist %d to %d, before update: %s" % (i, j, dists[i, j]))
+            if dists[i, j] < np.inf:
+                "path before update: "
+                curr = j
+                while curr != i:
+                    print(curr)
+                    curr = preds[i][curr]
+            # print("%d-%d path, before update: %s" % (i, j, nx.reconstruct_path(i, j, preds)))
 
             intermed_node = np.argmin(dists[i, :] + dists[:, j])
-            # print("intermed: %d" % intermed_node)
+            print("intermed: %d" % intermed_node)
             new_dist = dists[i, intermed_node] + dists[intermed_node, j]
-            # print(new_dist < dists[i, j])
+            print(new_dist < dists[i, j])
             if new_dist < dists[i, j]:
-                # if cycle[0] == 28 and cycle[-1] == 37:
-                #     seen = set()
-                #     print(i)
-                #     print(j)
-                #     print(intermed_node)
-                #     print("path to intermed: ")
-                #     curr = intermed_node
-                #     while curr != i:
-                #         if curr in seen:
-                #             print(curr)
-                #             sys.exit(0)
-                #         seen.add(curr)
-                #         print(curr)
-                #         curr = preds[i][curr]
-                #     print("path from intermed: ")
-                #     curr = j
-                #     seen = set()
-                #     while curr != intermed_node:
-                #         print(curr)
-                #         if curr in seen:
-                #             sys.exit(0)
-                #         seen.add(curr)
-                #         curr = preds[intermed_node][curr]
-                # time.sleep(0.00001)
                 path_to_intermed = reconstruct_path(i, intermed_node, preds)
                 path_from_intermed = reconstruct_path(intermed_node, j, preds)
-                # print("%d-%d path: %s" % (i, intermed_node, path_to_intermed))
-                # print("%d-%d path: %s" % (intermed_node, j, path_from_intermed))
+                print("%d-%d path: %s" % (i, intermed_node, path_to_intermed))
+                print("%d-%d path: %s" % (intermed_node, j, path_from_intermed))
 
                 change = True
                 # Update dists
                 dists[i, j] = new_dist
-                # print("dist %d to %d is now %s" % (i, j, dists[i, j]))
+                print("dist %d to %d is now %s" % (i, j, dists[i, j]))
 
                 # If the paths intersect, we need to decycle them. They may intersect in multiple places.
                 # There are no negative cycles outside the region, but we must just not have updated the distance
@@ -472,6 +634,7 @@ def update_shortest_paths(adj_matrix, dists, preds, inverted_idx, region, update
 
                 actual_path = path_to_intermed[:-1] + path_from_intermed
                 actual_path = decycle(actual_path)
+                print("actual path: ", actual_path)
 
                 # path_from_intermed_set = set(path_from_intermed)
                 # if set(path_to_intermed[:-1]) & path_from_intermed_set:
@@ -508,22 +671,7 @@ def update_shortest_paths(adj_matrix, dists, preds, inverted_idx, region, update
 
     # print("updated sp's in %s s" % (time.time() - st))
 
-    st = time.time()
-    # print("Done updating dists, preds. Update inverted idx")
-    # Basically, we need to update the inverted index for any node in the region?
-    for (u, v) in product(region, region):
-        inverted_idx[(u, v)] = set()
-
-    for u, v in update_pairs:
-        # print("update path from %d to %d" % (u, v))
-        if preds[u, v] > -999:
-            end = v
-            while end != u:
-                # print(pred)
-                inverted_idx[(preds[u][end], end)].add((u, v))
-                end = preds[u, end]
-
-    return dists, preds, inverted_idx
+    return dists, preds
 
 
 def super_algorithm(g_p, g_r, f, s, bids, h, trade_param, special=False):

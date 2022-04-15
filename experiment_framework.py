@@ -34,7 +34,7 @@ def run_experiment(dset_name, query_model, seed, lamb, data_dir):
             query_model.update(r, query, int(true_bids[r, query]))
             # print("update time: %s s" % (time.time() - st))
             print("Next query for reviewer %d was %d" % (r, query))
-            print("Current E[USW] is %s" % query_model.curr_expected_value)
+            # print("Current E[USW] is %s" % query_model.curr_expected_value)
 
     os.makedirs(os.path.join(data_dir, "v_tildes"), exist_ok=True)
 

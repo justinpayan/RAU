@@ -10,10 +10,13 @@ import numpy as np
 import networkx as nx
 import os
 import time
+from collections import Counter
 
-from scipy.sparse.csgraph import floyd_warshall
+# from scipy.sparse.csgraph import floyd_warshall
+# from scipy import sparse
+from floyd_warshall import floyd_warshall_single_core
 
-from utils import spfa, spfa_simple, super_algorithm, cycle_beam, spfa_adj_matrix, apply_cycle, reconstruct_path, update_shortest_paths
+from utils import spfa, spfa_simple, super_algorithm, cycle_beam, spfa_adj_matrix, apply_cycle, reconstruct_path, update_shortest_paths, update_shortest_paths_keeping_region_edges
 
 
 class QueryModel(object):
@@ -49,6 +52,81 @@ class TpmsQueryModel(QueryModel):
 
     def __str__(self):
         return "tpms"
+
+
+class RandomSampleQueryModel(QueryModel):
+    def __init__(self, tpms, dset_name, solver, covs, loads):
+        super().__init__(tpms, dset_name)
+        self.allocs = []
+        for seed in range(10):
+            print(seed)
+            np.random.seed(seed)
+
+            tpms = np.clip(tpms, 0, np.inf)
+            tpms /= np.max(tpms)
+
+            # Sample the "true" bids that would occur if reviewers bid on all papers.
+            true_bids = np.random.uniform(size=tpms.shape) < tpms
+            _, alloc = solver(true_bids, covs, loads)
+            self.allocs.append(alloc)
+        m = tpms.shape[0]
+        counters = {r: Counter() for r in range(m)}
+        for alloc in self.allocs:
+            for r in range(m):
+                papers = np.where(alloc[r, :])[0].tolist()
+                # print("papers assigned to r: ", r, papers)
+                counters[r].update(papers)
+        self.best_queries = []
+        for r in range(m):
+            sorted_papers = [y[0] for y in sorted(counters[r].items(), key=lambda x: -x[1])]
+            other_queries = set(range(tpms.shape[1])) - set(sorted_papers)
+            # self.best_queries.append(sorted_papers + sorted(list(other_queries), key=lambda x: random.random()))
+            self.best_queries.append(sorted_papers)
+        # print(self.best_queries)
+        self.tpms_orig = tpms
+        self.bids = np.zeros(tpms.shape)
+
+    def get_query(self, reviewer):
+        for p in self.best_queries[reviewer]:
+            if p not in self.already_queried[reviewer]:
+                return p
+        top_papers = np.argsort(self.v_tilde[reviewer, :]).tolist()
+
+        def g_r(s, pi=None):
+            if pi is None:
+                return (2 ** s - 1)
+            else:
+                return (2 ** s - 1) / np.log2(pi + 1)
+
+        def f(s, pi=None):
+            if pi is None:
+                return s
+            else:
+                return s / np.log2(pi + 1)
+
+        # g_p = lambda bids: np.sqrt(bids)
+        g_p = lambda bids: np.clip(bids, a_min=0, a_max=6)
+        # g_r = lambda s, pi: (2 ** s - 1) / np.log2(pi + 1)
+        # f = lambda s, pi: s/np.log2(pi + 1)
+        s = self.tpms_orig[reviewer, :]
+        bids = self.bids[reviewer, :]
+        h = np.zeros(bids.shape)
+        trade_param = .5
+        pi_t = super_algorithm(g_p, g_r, f, s, bids, h, trade_param, special=True)
+
+        top_papers = np.argsort(pi_t)
+        for p in top_papers:
+            if p not in self.already_queried[reviewer]:
+                return p
+        return None
+    
+    def update(self, r, query, response):
+        self.bids[r, query] = response
+        self.v_tilde[r, query] = response
+        self.already_queried[r].add(query)
+
+    def __str__(self):
+        return "randomsample"
 
 
 class SuperStarQueryModel(QueryModel):
@@ -1816,7 +1894,7 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
         #             adj_matrix1[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
 
         adj_matrix = np.ones((self.m + self.n + 1, self.m + self.n + 1)) * np.inf
-
+        # adj_matrix = np.ones((self.m + self.n + 1, self.m + self.n + 1)) * 100000
         can_take_fewer = np.sum(self.curr_alloc, axis=1) > self.lb + .1
         adj_matrix[:self.m, -1][can_take_fewer] = 0
         can_take_more = np.sum(self.curr_alloc, axis=1) < self.ub - .1
@@ -1828,8 +1906,10 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
         # assert np.allclose(adj_matrix, adj_matrix1)
 
         self.adj_matrix = adj_matrix
+        np.fill_diagonal(self.adj_matrix, 0.0)
 
         print("residual graph is set up")
+        # print(self.adj_matrix)
 
         # G = nx.DiGraph(self.adj_matrix)
 
@@ -1868,55 +1948,67 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
         #
         # print(getNegativeCycle(self.adj_matrix))
 
-        self.adj_matrix += 1e-10
-        self.adj_matrix[self.adj_matrix == np.inf] = 0
-        self.dists, self.preds = floyd_warshall(self.adj_matrix, return_predecessors=True)
-        self.adj_matrix[self.adj_matrix == 0] = np.inf
-        self.adj_matrix -= 1e-10
+        self.adj_matrix = self.adj_matrix.astype(np.double)
+
+        self.dists, self.preds = floyd_warshall_single_core(self.adj_matrix)
+        self.preds = self.preds.astype(np.int32)
+
+        print(np.any(self.dists < -100000))
+        print(self.dists[self.dists < -100000])
+
+        # print(self.adj_matrix)
+        # print(self.dists)
+        # print(self.preds)
         # cycle = spfa_adj_matrix(self.adj_matrix, {x for x in range(self.m + self.n + 1)})
         # print(cycle)
         print("APSP done")
 
-        self.inverted_idx = defaultdict(set)
-        for u in range(self.m + self.n + 1):
-            for v in range(self.m + self.n + 1):
-                if self.preds[u, v] > -999:
-                    end = v
-                    while self.preds[u, end] > -999:
-                        self.inverted_idx[(self.preds[u, end], end)].add((u, v))
-                        end = int(self.preds[u, end])
-        print("Constructed inverted idx")
+        # self.inverted_idx = defaultdict(set)
+        # for u in range(self.m + self.n + 1):
+        #     for v in range(self.m + self.n + 1):
+        #         if self.preds[u, v] > -999:
+        #             end = v
+        #             while self.preds[u, end] > -999:
+        #                 self.inverted_idx[(self.preds[u, end], end)].add((u, v))
+        #                 end = int(self.preds[u, end])
+        # print("Constructed inverted idx")
 
     def get_query(self, reviewer):
         qry_values = {}
 
-        # def g_r(s, pi=None):
-        #     if pi is None:
-        #         return (2 ** s - 1)
-        #     else:
-        #         return (2 ** s - 1) / np.log2(pi + 1)
-        #
-        # def f(s, pi=None):
-        #     if pi is None:
-        #         return s
-        #     else:
-        #         return s / np.log2(pi + 1)
-        #
-        # # g_p = lambda bids: np.sqrt(bids)
-        # g_p = lambda bids: np.clip(bids, a_min=0, a_max=6)
-        # # g_r = lambda s, pi: (2 ** s - 1) / np.log2(pi + 1)
-        # # f = lambda s, pi: s/np.log2(pi + 1)
-        # s = self.tpms_orig[reviewer, :]
-        # bids = self.bids[reviewer, :]
-        # h = np.zeros(bids.shape)
-        # trade_param = .5
-        # pi_t = super_algorithm(g_p, g_r, f, s, bids, h, trade_param, special=True)
+        def g_r(s, pi=None):
+            if pi is None:
+                return (2 ** s - 1)
+            else:
+                return (2 ** s - 1) / np.log2(pi + 1)
 
-        top_papers = range(self.n)
+        def f(s, pi=None):
+            if pi is None:
+                return s
+            else:
+                return s / np.log2(pi + 1)
+
+        # g_p = lambda bids: np.sqrt(bids)
+        g_p = lambda bids: np.clip(bids, a_min=0, a_max=6)
+        # g_r = lambda s, pi: (2 ** s - 1) / np.log2(pi + 1)
+        # f = lambda s, pi: s/np.log2(pi + 1)
+        s = self.tpms_orig[reviewer, :]
+        bids = self.bids[reviewer, :]
+        h = np.zeros(bids.shape)
+        trade_param = .5
+        pi_t = super_algorithm(g_p, g_r, f, s, bids, h, trade_param, special=True)
+
+        top_papers = np.argsort(pi_t)
         to_search = []
         for p in top_papers:
             if p not in self.already_queried[reviewer]:
                 to_search.append(p)
+        to_search = to_search[:self.k]
+        # top_papers = range(self.n)
+        # to_search = []
+        # for p in top_papers:
+        #     if p not in self.already_queried[reviewer]:
+        #         to_search.append(p)
 
         for q in to_search:
             # print("Determine value of %d to %d" % (q, reviewer))
@@ -1962,7 +2054,10 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
 
     def update(self, r, query, response):
         super().update(r, query, response)
-        self.curr_expected_value, self.curr_alloc = self._update_alloc(r, query, response)
+
+        self.curr_expected_value, curr_alloc = self._update_alloc(r, query, response)
+        print(np.where(self.curr_alloc != curr_alloc))
+        self.curr_alloc = curr_alloc
         # print("violations of lb: ", np.any(np.sum(self.curr_alloc, axis=1) < self.lb))
         # print("violations of ub: ", np.any(np.sum(self.curr_alloc, axis=1) > self.ub))
 
@@ -1981,6 +2076,7 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
         #         else:
         #             adj_matrix[reviewer][paper + self.m] = -self.v_tilde[reviewer, paper]
         adj_matrix = np.ones((self.m + self.n + 1, self.m + self.n + 1)) * np.inf
+        # adj_matrix = np.ones((self.m + self.n + 1, self.m + self.n + 1)) * 100000
 
         can_take_fewer = np.sum(self.curr_alloc, axis=1) > self.lb + .1
         adj_matrix[:self.m, -1][can_take_fewer] = 0
@@ -1990,7 +2086,7 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
                    self.v_tilde.transpose())
         np.putmask(adj_matrix[:self.m, self.m:(self.m + self.n)], 1 - self.curr_alloc.astype(np.int32),
                    -1 * self.v_tilde)
-        self.adj_matrix = adj_matrix
+        np.fill_diagonal(adj_matrix, 0.0)
 
         print("residual graph is set up")
 
@@ -2031,26 +2127,81 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
         #
         # print(getNegativeCycle(self.adj_matrix))
 
-        self.adj_matrix += 1e-10
-        self.adj_matrix[self.adj_matrix == np.inf] = 0
-        self.dists, self.preds = floyd_warshall(self.adj_matrix, return_predecessors=True)
-        self.adj_matrix[self.adj_matrix == 0] = np.inf
-        self.adj_matrix -= 1e-10
-        # cycle = spfa_adj_matrix(self.adj_matrix, {x for x in range(self.m + self.n + 1)})
-        # print(cycle)
 
-        self.inverted_idx = defaultdict(set)
-        for u in range(self.m + self.n + 1):
-            for v in range(self.m + self.n + 1):
-                if self.preds[u, v] > -999:
-                    end = v
-                    while self.preds[u, end] > -999:
-                        self.inverted_idx[(self.preds[u, end], end)].add((u, v))
-                        end = int(self.preds[u, end])
+        self.dists, preds = floyd_warshall_single_core(adj_matrix)
+        self.preds = preds.astype(np.int32)
+
+
+        # changed_out_nodes = np.any(self.adj_matrix != adj_matrix, axis=1).nonzero()[0].tolist()
+        # changed_in_nodes = np.any(self.adj_matrix != adj_matrix, axis=0).nonzero()[0].tolist()
+        # self.dists, self.preds = \
+        #     update_shortest_paths_keeping_region_edges(adj_matrix,
+        #                                                self.dists,
+        #                                                self.preds,
+        #                                                set(changed_in_nodes) | set(changed_out_nodes))
+        # # cycle = spfa_adj_matrix(self.adj_matrix, {x for x in range(self.m + self.n + 1)})
+        # # print(cycle)
+        # not_region = list(({i for i in range(self.m + self.n + 1)} - set(changed_in_nodes)) - set(changed_out_nodes))
+        # idxs = np.ix_(not_region, not_region)
+        # print(np.where(dists_scipy != self.dists))
+        # print(dists_scipy[np.where(dists_scipy != self.dists)])
+        # print(self.dists[np.where(dists_scipy != self.dists)])
+        # print(np.where(self.dists < dists_scipy))
+        #
+        # print(adj_matrix)
+        # print("preds_scipy ", preds_scipy)
+        # print("self.preds ", self.preds)
+        #
+        # print(self.dists[3, 0])
+        # print(dists_scipy[3, 0])
+        #
+        # path = []
+        # end = 0
+        # while end != 3:
+        #     path.append(end)
+        #     end = self.preds[3, end]
+        # path.append(3)
+        # path = path[::-1]
+        # print("self.preds path: ", path)
+        # sum = 0
+        # for i_idx in range(len(path) - 1):
+        #     sum += adj_matrix[path[i_idx], path[i_idx + 1]]
+        # print("sum over self.preds path: ", sum)
+        #
+        # path = []
+        # end = 0
+        # while end != 3:
+        #     path.append(end)
+        #     end = preds_scipy[3, end]
+        # path.append(3)
+        # path = path[::-1]
+        # print("preds_scipy path: ", path)
+        # sum = 0
+        # for i_idx in range(len(path)-1):
+        #     sum += adj_matrix[path[i_idx], path[i_idx + 1]]
+        # print("sum over preds_scipy path: ", sum)
+        #
+        #
+        # assert np.allclose(dists_scipy[idxs], self.dists[idxs])
+        # assert np.allclose(preds_scipy[idxs], self.preds[idxs])
+        #
+        # assert np.allclose(dists_scipy, self.dists)
+        # assert np.allclose(preds_scipy, self.preds)
+
+        self.adj_matrix = adj_matrix
+
+        # self.inverted_idx = defaultdict(set)
+        # for u in range(self.m + self.n + 1):
+        #     for v in range(self.m + self.n + 1):
+        #         if self.preds[u, v] > -999:
+        #             end = v
+        #             while self.preds[u, end] > -999:
+        #                 self.inverted_idx[(self.preds[u, end], end)].add((u, v))
+        #                 end = int(self.preds[u, end])
 
     def _update_alloc(self, r, query, response):
         # We know that if the queried paper is not currently assigned, and its value is 0, the allocation won't change.
-        # print("check value if paper %d for rev %d is %d" % (query, r, response))
+        print("check value if paper %d for rev %d is %d" % (query, r, response))
 
         # print(response)
 
@@ -2118,6 +2269,8 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
             else:
             #     # update the weight of the edge from query to r (should be positive).
                 adj_matrix[query + self.m][r] = response
+                print(dists[r, query + self.m])
+                print(r, query + self.m)
                 cycle = reconstruct_path(r, query + self.m, preds)[::-1]
         else:
             # The query was not allocated to reviewer r. We are now asking, what changes if we know the query is worth
@@ -2197,9 +2350,9 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
             # print("no region cycle")
             # There are no cycles within the region. So we will need to run APSP within the region, and then
             # use the shortest paths outside the region to detect any cycles passing through the region.
-            region_adj_matrix += 1e-10
-            region_adj_matrix[region_adj_matrix == np.inf] = 0
-            region_dists, region_preds = floyd_warshall(region_adj_matrix, return_predecessors=True)
+            region_dists, region_preds = floyd_warshall_single_core(region_adj_matrix)
+            region_preds = region_preds.astype(np.int32)
+
             # print("APSP within region took %s s" % (time.time() - st))
 
             # print("found apsp within region")
@@ -2225,10 +2378,9 @@ class SuperStarGreedyMaxQueryModel(QueryModel):
             else:
                 # print("Look for a cycle passing through region boundary")
                 st = time.time()
-                inverted_idx = deepcopy(self.inverted_idx)
                 # print("copying inverted index took: %s" % (time.time()-st))
                 st = time.time()
-                dists, preds, inverted_idx = update_shortest_paths(adj_matrix, dists, preds, inverted_idx, region, updated_alloc)
+                dists, preds = update_shortest_paths(adj_matrix, dists, preds, region)
                 # print("updated sp's in %s s" % (time.time() - st))
 
                 # print("applied the cycle")

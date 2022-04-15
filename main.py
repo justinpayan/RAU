@@ -66,6 +66,8 @@ def query_model(dset_name, obj, lamb, seed, data_dir, query_model_type):
     if query_model_type == "greedymax":
         query_model = GreedyMaxQueryModel(tpms, covs, loads, solver, dset_name, data_dir)
         # query_model = GreedyMaxQueryModelParallel(tpms, covs, loads, solver, dset_name, data_dir, num_procs)
+    elif query_model_type == "randomsample":
+        query_model = RandomSampleQueryModel(tpms, dset_name, solver, covs, loads)
     elif query_model_type == "var":
         query_model = VarianceReductionQueryModel(tpms, covs, loads, solver, dset_name)
     elif query_model_type == "supergreedymax":

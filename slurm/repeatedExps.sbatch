@@ -12,6 +12,6 @@ sbatch --job-name=repeated_exps_${DATASET}_${QUERY_MODEL}_${SEED} \
        --nodes=1 \
        --ntasks=1 \
        --mem=10G \
-       --time=06-00:00:00 \
-       --partition=longq \
+       --time=00-10:00:00 \
+       --partition=defq \
        ./repeatedExps.sh $DATASET $DATA_DIR $QUERY_MODEL $SEED

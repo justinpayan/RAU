@@ -8,7 +8,7 @@ expected_usw = {}
 init_true_usw = {}
 opt_usw = {}
 dsets = ["midl", "cvpr", "cvpr18"]
-qms = ["random", "tpms", "superstar", "supergreedymax"]
+qms = ["random", "tpms", "superstar", "randomsample"]
 
 for dset in dsets:
     expected_usw_list = []
@@ -37,8 +37,8 @@ print("No queries & $%.2f \\pm %.2f$ ($%.2f \\pm %.2f$) & "
                                                     ))
 
 
-
-str_map = {'random': 'Random', 'tpms': "TPMS", 'superstar': 'SUPER*', 'supergreedymax': "SUPER* + Max Exp. Value"}
+str_map = {'random': 'Random', 'tpms': "TPMS", 'superstar': 'SUPER*',
+           'supergreedymax': "SUPER* + Max Exp. Value", "randomsample": "Random Sample"}
 for query_model in qms:
     table_str = str_map[query_model] + " "
     for dset in dsets:

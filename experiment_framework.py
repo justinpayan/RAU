@@ -4,6 +4,7 @@ from tqdm import tqdm
 from utils import *
 import time
 
+
 def run_experiment(dset_name, query_model, seed, lamb, data_dir):
     tpms, true_bids, covs, loads = load_dset(dset_name, seed, data_dir)
 

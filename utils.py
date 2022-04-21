@@ -7,25 +7,26 @@ from itertools import product
 from queue import Queue
 from sortedcontainers import SortedList
 import networkx as nx
-from floyd_warshall import floyd_warshall_single_core
+# from floyd_warshall import floyd_warshall_single_core
 
 
 import time
+
 
 def load_dset(dname, seed, data_dir="."):
     tpms = np.load(os.path.join(data_dir, "data", dname, "scores.npy"))
     covs = np.load(os.path.join(data_dir, "data", dname, "covs.npy"))
     loads = np.load(os.path.join(data_dir, "data", dname, "loads.npy"))
 
-    np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     tpms = np.clip(tpms, 0, np.inf)
     tpms /= np.max(tpms)
 
     # Sample the "true" bids that would occur if reviewers bid on all papers.
-    noisy_tpms = tpms + np.random.randn(*tpms.shape) * 0.1 - 0.1
+    noisy_tpms = tpms + rng.normal(-0.1, 0.1, tpms.shape)
     noisy_tpms = np.clip(noisy_tpms, 0, 1)
-    true_bids = np.random.uniform(size=tpms.shape) < noisy_tpms
+    true_bids = rng.uniform(0, 1, size=tpms.shape) < noisy_tpms
 
     return tpms, true_bids, covs, loads
 
@@ -531,16 +532,16 @@ def apply_cycle(cycle, adj_matrix, updated_alloc, lb, ub):
 #     return dists, preds
 
 
-def update_shortest_paths(adj_matrix, dists, preds, region):
-    adj_matrix_mask = np.zeros(adj_matrix.shape)
-    for i, j in product(region, region):
-        if i != j:
-            adj_matrix_mask[i, j] = np.inf
-
-    dists, preds = floyd_warshall_single_core(adj_matrix + adj_matrix_mask)
-    preds = preds.astype(np.int32)
-
-    return dists, preds
+# def update_shortest_paths(adj_matrix, dists, preds, region):
+#     adj_matrix_mask = np.zeros(adj_matrix.shape)
+#     for i, j in product(region, region):
+#         if i != j:
+#             adj_matrix_mask[i, j] = np.inf
+#
+#     dists, preds = floyd_warshall_single_core(adj_matrix + adj_matrix_mask)
+#     preds = preds.astype(np.int32)
+#
+#     return dists, preds
 
 
 

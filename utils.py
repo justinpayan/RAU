@@ -100,12 +100,19 @@ def bvn(fractional_alloc):
     #     path = find_path(fractional_alloc)
     with open("fractional_alloc.txt", 'w') as f:
         m, n = fractional_alloc.shape
-        f.write("%d %d\n" % (m,n))
+        f.write("%d %d\n" % (m, n))
         f.write("1\n"*m)
         asst_str = ""
         for r in range(m):
             for p in range(n):
-                asst_str += "%d %d %s\n" % (r, p+m, fractional_alloc[r, p])
+                assn = 0
+                if not np.isclose(fractional_alloc[r, p], 0):
+                    assn = fractional_alloc[r, p]
+                print(np.isclose(fractional_alloc[r, p], 0))
+                print(fractional_alloc[r, p])
+                print(assn)
+                print("\n")
+                asst_str += "%d %d %.6f\n" % (r, p+m, assn)
         f.write(asst_str[:-1])
 
     os.system("a.exe < fractional_alloc.txt > output_bvn.txt")

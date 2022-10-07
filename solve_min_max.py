@@ -10,7 +10,7 @@ def get_worst_case(alloc, tpms, error_bound):
     soc_constraint = [cp.SOC(error_bound, s - tpms.ravel())]
     prob = cp.Problem(cp.Minimize(alloc.ravel().T @ s),
                       soc_constraint + [s >= np.zeros(s.shape), s <= np.ones(s.shape)])
-    prob.solve()
+    prob.solve(solver='SCS')
 
     return s.value.reshape(tpms.shape)
 
@@ -44,16 +44,16 @@ def solve_min_max(tpms, covs, loads, error_bound):
 
     t = 0
     converged = False
-    max_iter = 50
+    max_iter = 2
 
     while not converged and t < max_iter:
-        rate = 1/(1+t)
+        rate = 1/2
 
         # Compute the worst-case S matrix using second order cone programming
         worst_s = get_worst_case(alloc, tpms, error_bound)
 
         diff = np.sqrt(np.sum((worst_s - tpms)**2))
-        assert diff-1e-5 <= error_bound
+        assert diff-1e-2 <= error_bound
 
         # Update the allocation
         # 1, compute the gradient (I think it's just the value of the worst s, but check to be sure).

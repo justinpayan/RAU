@@ -50,7 +50,7 @@ def solve_max_min(tpms, covs, loads, error_bound):
     max_iter = 20
 
     while not converged and t < max_iter:
-        rate = 1/t
+        rate = 1/(t+1)
 
         # Compute the worst-case S matrix using second order cone programming
         print("Computing worst case S matrix")

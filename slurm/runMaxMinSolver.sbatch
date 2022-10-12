@@ -12,4 +12,4 @@
 DATASET=midl
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
 
-./runMinMaxSolver.sh $DATASET $DATA_DIR
+./runMaxMinSolver.sh $DATASET $DATA_DIR

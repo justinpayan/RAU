@@ -108,7 +108,7 @@ def bvn(fractional_alloc):
                 assn = 0
                 if not np.isclose(fractional_alloc[r, p], 0):
                     assn = fractional_alloc[r, p]
-                asst_str += "%d %d %.6f\n" % (r, p+m, assn)
+                asst_str += "%d %d %.6f\n" % (r, p+m, np.abs(assn))
         f.write(asst_str[:-1])
 
     os.system("/mnt/nfs/scratch1/jpayan/MinimalBidding/a.out < fractional_alloc.txt > output_bvn.txt")

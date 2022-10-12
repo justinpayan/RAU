@@ -115,13 +115,12 @@ def bvn(fractional_alloc):
                 asst_str += "%d %d %.6f\n" % (r, p+m, assn)
         f.write(asst_str[:-1])
 
-    os.system("a.exe < fractional_alloc.txt > output_bvn.txt")
+    os.system("./a.out < fractional_alloc.txt > output_bvn.txt")
 
     rounded_alloc = np.zeros(fractional_alloc.shape)
     with open("output_bvn.txt", 'r') as f:
         lines = f.readlines()
-        assert math.isclose(int(lines[0].strip()), np.sum(fractional_alloc))
-        for line in lines[1:]:
+        for line in lines:
             r, p = line.strip().split()
             r = int(r)
             p = int(p) - m

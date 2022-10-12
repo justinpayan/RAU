@@ -2,6 +2,7 @@
 import numpy as np
 from solve_usw import solve_usw_gurobi
 import cvxpy as cp
+import time
 
 
 def get_worst_case(alloc, tpms, error_bound):
@@ -37,19 +38,23 @@ def project_to_feasible(alloc, covs, loads):
 # that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
 # out the maximin assignment where we worst-case over the true scores within "error_bound" of
 # the tpms scores.
-def solve_min_max(tpms, covs, loads, error_bound):
+def solve_max_min(tpms, covs, loads, error_bound):
+    st = time.time()
+    print("Solving for initial max USW alloc")
     _, alloc = solve_usw_gurobi(tpms, covs, loads)
 
-    print("Solving min max")
+    print("Solving min max: %s elapsed" % (time.time() - st))
 
     t = 0
     converged = False
-    max_iter = 2
+    max_iter = 20
 
     while not converged and t < max_iter:
-        rate = 1/2
+        rate = 1/t
 
         # Compute the worst-case S matrix using second order cone programming
+        print("Computing worst case S matrix")
+        print("%s elapsed" % (time.time() - st))
         worst_s = get_worst_case(alloc, tpms, error_bound)
 
         diff = np.sqrt(np.sum((worst_s - tpms)**2))
@@ -67,6 +72,7 @@ def solve_min_max(tpms, covs, loads, error_bound):
         alloc = alloc + rate * alloc_grad
 
         # Project to the set of feasible allocations
+        print("Projecting to feasible set: %s elapsed" % (time.time() - st))
         alloc = project_to_feasible(alloc, covs, loads)
 
         # Check for convergence, update t
@@ -77,6 +83,7 @@ def solve_min_max(tpms, covs, loads, error_bound):
         if t % 1 == 0:
             print("Step %d" % t)
             print("Obj value: ", np.sum(old_alloc*worst_s))
+            print("%s elapsed" % (time.time() - st))
 
     return alloc
 

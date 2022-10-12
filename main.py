@@ -1,6 +1,6 @@
 
 from solve_usw import solve_usw_gurobi
-from solve_min_max import solve_min_max, get_worst_case
+from solve_max_min import get_worst_case, solve_max_min
 from utils import *
 
 import argparse
@@ -24,36 +24,46 @@ if __name__ == "__main__":
     # Load in the estimated data matrix, and the true data matrix
     tpms, true_scores, covs, loads = load_dset(dset_name, seed, data_dir)
 
+    # Save the data used for this run
+    np.save("true_scores_%s_%d.npy" % (dset_name, seed), true_scores)
+
     # Run the baseline, which is just TPMS
     print("Solving for max USW using TPMS scores")
     objective_score, alloc = solve_usw_gurobi(tpms, covs, loads)
+    
+    np.save("tpms_alloc_%s_%d.npy" % (dset_name, seed), alloc)
 
     true_obj = np.sum(alloc * true_scores)
 
     print("Solving for max USW using true bids")
     opt, opt_alloc = solve_usw_gurobi(true_scores, covs, loads)
+    
+    np.save("opt_alloc_%s_%d.npy" % (dset_name, seed), opt_alloc)
 
     # Run the min-max model
     error_bound = np.sqrt(np.sum((tpms - true_scores)**2)) * 1.0
-    print(error_bound)
-    fractional_alloc_min_max = solve_min_max(tpms, covs, loads, error_bound)
-    alloc_min_max = bvn(fractional_alloc_min_max)
+    print("Error bound is: ", error_bound)
+    fractional_alloc_max_min = solve_max_min(tpms, covs, loads, error_bound)
+    np.save("fractional_max_min_alloc_%s_%d.npy" % (dset_name, seed), fractional_alloc_max_min)
+    alloc_max_min = bvn(fractional_alloc_max_min)
+    np.save("max_min_alloc_%s_%d.npy" % (dset_name, seed), alloc_max_min)
+
     print(loads)
-    print(np.sum(alloc_min_max, axis=1))
+    print(np.sum(alloc_max_min, axis=1))
     print(covs)
-    print(np.sum(alloc_min_max, axis=0))
-    print(np.all(np.sum(alloc_min_max, axis=1) <= loads))
-    print(np.all(np.sum(alloc_min_max, axis=0) == covs))
-    true_obj_min_max = np.sum(alloc_min_max * true_scores)
+    print(np.sum(alloc_max_min, axis=0))
+    print(np.all(np.sum(alloc_max_min, axis=1) <= loads))
+    print(np.all(np.sum(alloc_max_min, axis=0) == covs))
+    true_obj_max_min = np.sum(alloc_max_min * true_scores)
 
     worst_s = get_worst_case(alloc, tpms, error_bound)
     worst_case_obj_tpms = np.sum(worst_s * alloc)
 
-    worst_s = get_worst_case(alloc_min_max, tpms, error_bound)
-    worst_case_obj_min_max = np.sum(worst_s * alloc_min_max)
+    worst_s = get_worst_case(alloc_max_min, tpms, error_bound)
+    worst_case_obj_max_min = np.sum(worst_s * alloc_max_min)
 
     print("\n*******************\n*******************\n*******************\n")
-    print("Stats for ", dset_name)
+    print("Stats for %s with seed %d" % (dset_name, seed))
     print("Optimal USW: %.2f" % opt)
     print("\n")
     print("Estimated USW from using TPMS scores: %.2f" % objective_score)
@@ -61,6 +71,6 @@ if __name__ == "__main__":
     print("Worst case USW from using TPMS scores: %.2f" % worst_case_obj_tpms)
     print("Efficiency loss from using TPMS scores (percent of opt): %.2f" % (100 * (opt - true_obj) / opt))
     print("\n")
-    print("True USW from min_max optimizer: %.2f" % true_obj_min_max)
-    print("Worst case USW from min_max optimizer: %.2f" % worst_case_obj_min_max)
-    print("Efficiency loss for min_max (percent of opt): %.2f" % (100 * (opt - true_obj_min_max) / opt))
+    print("True USW from max_min optimizer: %.2f" % true_obj_max_min)
+    print("Worst case USW from max_min optimizer: %.2f" % worst_case_obj_max_min)
+    print("Efficiency loss for max_min (percent of opt): %.2f" % (100 * (opt - true_obj_max_min) / opt))

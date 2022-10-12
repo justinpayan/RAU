@@ -115,7 +115,7 @@ def bvn(fractional_alloc):
                 asst_str += "%d %d %.6f\n" % (r, p+m, assn)
         f.write(asst_str[:-1])
 
-    os.system("./a.out < fractional_alloc.txt > output_bvn.txt")
+    os.system("/mnt/nfs/scratch1/jpayan/MinimalBidding/a.out < fractional_alloc.txt > output_bvn.txt")
 
     rounded_alloc = np.zeros(fractional_alloc.shape)
     with open("output_bvn.txt", 'r') as f:

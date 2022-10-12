@@ -108,10 +108,6 @@ def bvn(fractional_alloc):
                 assn = 0
                 if not np.isclose(fractional_alloc[r, p], 0):
                     assn = fractional_alloc[r, p]
-                print(np.isclose(fractional_alloc[r, p], 0))
-                print(fractional_alloc[r, p])
-                print(assn)
-                print("\n")
                 asst_str += "%d %d %.6f\n" % (r, p+m, assn)
         f.write(asst_str[:-1])
 

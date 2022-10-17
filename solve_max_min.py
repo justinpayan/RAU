@@ -104,5 +104,5 @@ def solve_max_min(tpms, covs, loads, error_bound):
             print("Obj value: ", np.sum(old_alloc*worst_s))
             print("%s elapsed" % (time.time() - st))
 
-    return project_to_integer(alloc, covs, loads)
-
+    # return project_to_integer(alloc, covs, loads)
+    return alloc

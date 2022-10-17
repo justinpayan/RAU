@@ -33,8 +33,8 @@ if __name__ == "__main__":
     print("Error bound is: ", error_bound)
     fractional_alloc_max_min = solve_max_min(tpms, covs, loads, error_bound)
     np.save("fractional_max_min_alloc_%s_%d.npy" % (dset_name, seed), fractional_alloc_max_min)
-    # alloc_max_min = bvn(fractional_alloc_max_min)
-    alloc_max_min = fractional_alloc_max_min
+    alloc_max_min = bvn(fractional_alloc_max_min)
+    # alloc_max_min = fractional_alloc_max_min
     np.save("max_min_alloc_%s_%d.npy" % (dset_name, seed), alloc_max_min)
 
     # Run the baseline, which is just TPMS

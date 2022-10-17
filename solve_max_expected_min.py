@@ -84,7 +84,8 @@ def solve_max_expected_min(tpms, covs, loads, error_bound):
 
             grads.append(worst_s)
 
-        alloc_grad = np.mean(grads)
+        grads = np.array(grads)
+        alloc_grad = np.mean(grads, axis=0)
         old_alloc = alloc.copy()
         alloc = alloc + rate * alloc_grad
 

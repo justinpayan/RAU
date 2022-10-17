@@ -28,26 +28,27 @@ if __name__ == "__main__":
     # Save the data used for this run
     np.save("true_scores_%s_%d.npy" % (dset_name, seed), true_scores)
 
+    # Run the max-min model
+    error_bound = np.sqrt(np.sum((tpms - true_scores)**2)) * 1.0
+    print("Error bound is: ", error_bound)
+    fractional_alloc_max_min = solve_max_min(tpms, covs, loads, error_bound)
+    np.save("fractional_max_min_alloc_%s_%d.npy" % (dset_name, seed), fractional_alloc_max_min)
+    # alloc_max_min = bvn(fractional_alloc_max_min)
+    alloc_max_min = fractional_alloc_max_min
+    np.save("max_min_alloc_%s_%d.npy" % (dset_name, seed), alloc_max_min)
+
     # Run the baseline, which is just TPMS
     print("Solving for max USW using TPMS scores")
     objective_score, alloc = solve_usw_gurobi(tpms, covs, loads)
-    
+
     np.save("tpms_alloc_%s_%d.npy" % (dset_name, seed), alloc)
 
     true_obj = np.sum(alloc * true_scores)
 
     print("Solving for max USW using true bids")
     opt, opt_alloc = solve_usw_gurobi(true_scores, covs, loads)
-    
-    np.save("opt_alloc_%s_%d.npy" % (dset_name, seed), opt_alloc)
 
-    # Run the min-max model
-    error_bound = np.sqrt(np.sum((tpms - true_scores)**2)) * 1.0
-    print("Error bound is: ", error_bound)
-    fractional_alloc_max_min = solve_max_expected_min(tpms, covs, loads, error_bound)
-    np.save("fractional_max_min_alloc_%s_%d.npy" % (dset_name, seed), fractional_alloc_max_min)
-    alloc_max_min = bvn(fractional_alloc_max_min)
-    np.save("max_min_alloc_%s_%d.npy" % (dset_name, seed), alloc_max_min)
+    np.save("opt_alloc_%s_%d.npy" % (dset_name, seed), opt_alloc)
 
     print(loads)
     print(np.sum(alloc_max_min, axis=1))

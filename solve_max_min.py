@@ -30,7 +30,24 @@ def project_to_feasible(alloc, covs, loads):
                    x >= np.zeros(x.shape),
                    x <= np.ones(x.shape)]
     prob = cp.Problem(cp.Minimize(cost), constraints)
-    prob.solve()
+    prob.solve(verbose=True)
+    return x.value
+
+
+def project_to_integer(alloc, covs, loads):
+    # The allocation is likely not integral.
+    # Find the integer allocation with the smallest L2 distance from the current one
+    x = cp.Variable(shape=alloc.shape, integer=True)
+    m, n = alloc.shape
+    cost = cp.sum_squares(x - alloc)
+    n_vec = np.ones((n, 1))
+    m_vec = np.ones((m, 1))
+    constraints = [x @ n_vec <= loads.reshape((m, 1)),
+                   x.T @ m_vec == covs.reshape((n, 1)),
+                   x >= np.zeros(x.shape),
+                   x <= np.ones(x.shape)]
+    prob = cp.Problem(cp.Minimize(cost), constraints)
+    prob.solve(verbose=True)
     return x.value
 
 
@@ -41,9 +58,11 @@ def project_to_feasible(alloc, covs, loads):
 def solve_max_min(tpms, covs, loads, error_bound):
     st = time.time()
     print("Solving for initial max USW alloc")
-    _, alloc = solve_usw_gurobi(tpms, covs, loads)
+    # _, alloc = solve_usw_gurobi(tpms, covs, loads)
+    alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
+    alloc = project_to_feasible(alloc, covs, loads)
 
-    print("Solving min max: %s elapsed" % (time.time() - st))
+    print("Solving max min: %s elapsed" % (time.time() - st))
 
     t = 0
     converged = False
@@ -85,5 +104,5 @@ def solve_max_min(tpms, covs, loads, error_bound):
             print("Obj value: ", np.sum(old_alloc*worst_s))
             print("%s elapsed" % (time.time() - st))
 
-    return alloc
+    return project_to_integer(alloc, covs, loads)
 

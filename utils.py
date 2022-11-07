@@ -46,7 +46,7 @@ def load_dset(dname, seed, data_dir=".", noise_model="ball"):
         # noisy_tpms = tpms + noise
 
         error_est = np.zeros(tpms.shape)
-        error_est[alloc > 0.5] = 10
+        error_est[alloc > 0.5] = 50
 
         # Ensure that the L2 norm of u is = 1
         num_errors = np.where(alloc > 0.5)[0].shape[0]

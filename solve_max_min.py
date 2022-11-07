@@ -108,6 +108,9 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
     alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
     alloc = project_to_feasible(alloc, covs, loads)
 
+    global_opt_obj = 0.0
+    global_opt_alloc = alloc.copy()
+
     print("Solving max min: %s elapsed" % (time.time() - st))
 
     converged = False
@@ -123,6 +126,7 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
     # For vanilla
     t = 0
     lr = 1
+    steps_no_imp = 0
 
     while not converged and t < max_iter:
         # Compute the worst-case S matrix using second order cone programming
@@ -160,17 +164,26 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
         # alloc = bvn(alloc)
 
         # Check for convergence, update t
-        update_amt = np.linalg.norm(alloc - old_alloc)
-        converged = np.isclose(0, update_amt, atol=1e-6)
+        # update_amt = np.linalg.norm(alloc - old_alloc)
+        # converged = np.isclose(0, update_amt, atol=1e-6)
         t += 1
+
+        prev_obj_val = np.sum(old_alloc * worst_s)
+        if prev_obj_val > global_opt_obj:
+            global_opt_obj = prev_obj_val
+            global_opt_alloc = old_alloc
+        else:
+            steps_no_imp += 1
+
+        if steps_no_imp > 10:
+            return global_opt_alloc
 
         if t % 1 == 0:
             print("Step %d" % t)
             print("Obj value: ", np.sum(old_alloc*worst_s))
             print("%s elapsed" % (time.time() - st))
 
-    # return project_to_integer(alloc, covs, loads)
-    return alloc
+    return global_opt_alloc
 
 
 def solve_max_min_project_each_step(tpms, covs, loads, error_bound):

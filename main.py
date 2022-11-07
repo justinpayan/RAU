@@ -1,6 +1,6 @@
 
 from solve_usw import solve_usw_gurobi
-from solve_max_min import get_worst_case, solve_max_min
+from solve_max_min import get_worst_case, solve_max_min, solve_max_min_project_each_step
 from solve_max_expected_min import solve_max_expected_min
 from utils import *
 
@@ -31,10 +31,10 @@ if __name__ == "__main__":
     # Run the max-min model
     error_bound = np.sqrt(np.sum((tpms - true_scores)**2)) * 1.0
     print("Error bound is: ", error_bound)
+    # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
     fractional_alloc_max_min = solve_max_min(tpms, covs, loads, error_bound)
     np.save("fractional_max_min_alloc_%s_%d.npy" % (dset_name, seed), fractional_alloc_max_min)
     alloc_max_min = bvn(fractional_alloc_max_min)
-    # alloc_max_min = fractional_alloc_max_min
     np.save("max_min_alloc_%s_%d.npy" % (dset_name, seed), alloc_max_min)
 
     # Run the baseline, which is just TPMS

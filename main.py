@@ -34,8 +34,8 @@ if __name__ == "__main__":
     # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
     fractional_alloc_max_min = solve_max_min(tpms, covs, loads, error_bound)
     np.save("fractional_max_min_alloc_%s_%d.npy" % (dset_name, seed), fractional_alloc_max_min)
-    alloc_max_min = best_of_n_bvn(fractional_alloc_max_min, tpms, error_bound, n=10)
-    # alloc_max_min = bvn(fractional_alloc_max_min)
+    # alloc_max_min = best_of_n_bvn(fractional_alloc_max_min, tpms, error_bound, n=10)
+    alloc_max_min = bvn(fractional_alloc_max_min)
     np.save("max_min_alloc_%s_%d.npy" % (dset_name, seed), alloc_max_min)
 
     # Run the baseline, which is just TPMS

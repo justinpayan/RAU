@@ -3,6 +3,7 @@ import numpy as np
 from solve_usw import solve_usw_gurobi
 import cvxpy as cp
 import time
+from utils import bvn
 
 
 def get_worst_case(alloc, tpms, error_bound):
@@ -93,6 +94,8 @@ def solve_max_min(tpms, covs, loads, error_bound):
         # Project to the set of feasible allocations
         print("Projecting to feasible set: %s elapsed" % (time.time() - st))
         alloc = project_to_feasible(alloc, covs, loads)
+
+        alloc = bvn(alloc)
 
         # Check for convergence, update t
         update_amt = np.linalg.norm(alloc - old_alloc)

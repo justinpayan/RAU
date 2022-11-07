@@ -1,17 +1,7 @@
-import lap
-import math
 import numpy as np
 import os
 
-from collections import defaultdict
-from itertools import product
-from queue import Queue
-from sortedcontainers import SortedList
-import networkx as nx
-# from floyd_warshall import floyd_warshall_single_core
-
-
-import time
+from solve_max_min import get_worst_case
 
 
 def load_dset(dname, seed, data_dir="."):
@@ -124,5 +114,19 @@ def bvn(fractional_alloc):
     return rounded_alloc
 
 
-
+# Run bvn n times. Check the worst-case objective value for each run, and take the best.
+def best_of_n_bvn(fractional_alloc, tpms, error_bound, n=10):
+    print("Sampling %d allocations" % n)
+    best_alloc = None
+    best_worst_case = -np.inf
+    for i in range(n):
+        rounded_alloc = bvn(fractional_alloc)
+        worst_s = get_worst_case(rounded_alloc, tpms, error_bound)
+        worst_case_obj = np.sum(worst_s * rounded_alloc)
+        print("Worst case obj value is %.2f" % worst_case_obj)
+        if worst_case_obj > best_worst_case:
+            best_alloc = rounded_alloc
+            best_worst_case = worst_case_obj
+    print("Found obj value %.2f" % best_worst_case)
+    return best_alloc
 

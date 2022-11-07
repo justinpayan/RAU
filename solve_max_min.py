@@ -110,13 +110,20 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
 
     print("Solving max min: %s elapsed" % (time.time() - st))
 
-    t = 0
     converged = False
     max_iter = 20
 
-    while not converged and t < max_iter:
-        rate = 1/(t+1)
+    # Init params for grad asc
 
+    # For adagrad
+    cache = np.zeros(tpms.shape)
+    lr = .01
+    eps = 1e-4
+
+    # For vanilla
+    t = 0
+
+    while not converged and t < max_iter:
         # Compute the worst-case S matrix using second order cone programming
         print("Computing worst case S matrix")
         print("%s elapsed" % (time.time() - st))
@@ -140,7 +147,13 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
 
         alloc_grad = worst_s
 
-        alloc = alloc + rate * alloc_grad
+        # vanilla update
+        # rate = 1/(t+1)
+        # alloc = alloc + rate * alloc_grad
+
+        # adagrad update
+        cache += alloc_grad ** 2
+        alloc += lr * alloc_grad / (np.sqrt(cache) + eps)
 
         # Project to the set of feasible allocations
         print("Projecting to feasible set: %s elapsed" % (time.time() - st))

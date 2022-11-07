@@ -116,12 +116,13 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
     # Init params for grad asc
 
     # For adagrad
-    cache = np.zeros(tpms.shape)
-    lr = .01
-    eps = 1e-4
+    # cache = np.zeros(tpms.shape)
+    # lr = .01
+    # eps = 1e-4
 
     # For vanilla
     t = 0
+    lr = 1
 
     while not converged and t < max_iter:
         # Compute the worst-case S matrix using second order cone programming
@@ -148,12 +149,9 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
         alloc_grad = worst_s
 
         # vanilla update
-        # rate = 1/(t+1)
-        # alloc = alloc + rate * alloc_grad
-
-        # adagrad update
-        cache += alloc_grad ** 2
-        alloc += lr * alloc_grad / (np.sqrt(cache) + eps)
+        if t % 10 == 0:
+            lr /= 2
+        alloc = alloc + lr * alloc_grad
 
         # Project to the set of feasible allocations
         print("Projecting to feasible set: %s elapsed" % (time.time() - st))

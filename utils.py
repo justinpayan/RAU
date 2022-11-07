@@ -40,9 +40,11 @@ def load_dset(dname, seed, data_dir=".", noise_model="ball"):
         # Let's assume the noise is the same, but we just know more about it.
         # Maybe this will need to change later.
         _, alloc = solve_usw_gurobi(tpms, covs, loads)
-        noise = rng.normal(-.2, 0.05, tpms.shape)
-        noise[alloc < 0.5] = 0
-        noisy_tpms = tpms + noise
+        # noise = rng.normal(-.2, 0.05, tpms.shape)
+        # noise[alloc < 0.5] = 0
+        # noisy_tpms = tpms + noise
+        noisy_tpms = tpms.copy()
+        noisy_tpms[alloc > 0.5] = 0.0
         # noisy_tpms = tpms + rng.normal(-0.05, 0.05, tpms.shape)
         noisy_tpms = np.clip(noisy_tpms, 0, 1)
         true_scores = noisy_tpms

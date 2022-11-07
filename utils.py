@@ -3,6 +3,8 @@ import os
 
 from solve_max_min import get_worst_case
 
+from solve_usw import solve_usw_gurobi
+
 
 def load_dset(dname, seed, data_dir=".", noise_model="ball"):
     assert noise_model in ["ball", "ellipse"]
@@ -37,7 +39,9 @@ def load_dset(dname, seed, data_dir=".", noise_model="ball"):
     elif noise_model == "ellipse":
         # Let's assume the noise is the same, but we just know more about it.
         # Maybe this will need to change later.
-        noisy_tpms = tpms + rng.normal(-0.05, 0.05, tpms.shape)
+        _, alloc = solve_usw_gurobi(tpms, covs, loads)
+        noisy_tpms = tpms + rng.normal(-.2, 0.05, tpms.shape)[np.where(alloc)]
+        # noisy_tpms = tpms + rng.normal(-0.05, 0.05, tpms.shape)
         noisy_tpms = np.clip(noisy_tpms, 0, 1)
         true_scores = noisy_tpms
 

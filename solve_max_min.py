@@ -111,13 +111,13 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
     print("Solving max min: %s elapsed" % (time.time() - st))
 
     converged = False
-    max_iter = 20
+    max_iter = 300
 
     # Init params for grad asc
 
     # For adagrad
     cache = np.zeros(tpms.shape)
-    lr = .08
+    lr = .01
     eps = 1e-4
 
     # For vanilla

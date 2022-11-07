@@ -52,9 +52,9 @@ def get_worst_case(alloc, tpms, error_bound, noise_model="ball"):
         u = cp.Variable(tpms.shape[0] * tpms.shape[1])
 
         soc_constraint = [cp.SOC(1, u)]
-        prob = cp.Problem(cp.Minimize(alloc.ravel().T @ (tpms.ravel() + error_bound.ravel()*u)),
-                          soc_constraint + [(tpms.ravel() + error_bound.ravel() * u) >= np.zeros(u.shape),
-                                            (tpms.ravel() + error_bound.ravel() * u) <= np.ones(u.shape)])
+        prob = cp.Problem(cp.Minimize(alloc.ravel().T @ (tpms.ravel() + cp.multiply(error_bound.ravel(), u))),
+                          soc_constraint + [(tpms.ravel() + cp.multiply(error_bound.ravel(), u)) >= np.zeros(u.shape),
+                                            (tpms.ravel() + cp.multiply(error_bound.ravel(), u)) <= np.ones(u.shape)])
         prob.solve(solver='SCS')
 
         return tpms + error_bound * u.value.reshape(tpms.shape)

@@ -36,6 +36,7 @@ def load_dset(dname, seed, data_dir=".", noise_model="ball"):
         noisy_tpms = np.clip(noisy_tpms, 0, 1)
         true_scores = noisy_tpms
         # true_scores = rng.uniform(0, 1, size=tpms.shape) < noisy_tpms
+        return tpms, true_scores, covs, loads
     elif noise_model == "ellipse":
         # Let's assume the noise is the same, but we just know more about it.
         # Maybe this will need to change later.
@@ -43,13 +44,29 @@ def load_dset(dname, seed, data_dir=".", noise_model="ball"):
         # noise = rng.normal(-.2, 0.05, tpms.shape)
         # noise[alloc < 0.5] = 0
         # noisy_tpms = tpms + noise
+
+        error_est = np.zeros(tpms.shape)
+        error_est[alloc > 0.5] = 10
+
+        # Ensure that the L2 norm of u is = 1
+        num_errors = np.where(alloc > 0.5).shape[0]
+        u = np.uniform(num_errors)
+        u /= u.sum()
+        u = np.sqrt(u)
+
         noisy_tpms = tpms.copy()
-        noisy_tpms[alloc > 0.5] = 0.0
+        noisy_tpms[alloc > 0.5] = noisy_tpms[alloc > 0.5] - error_est[alloc > 0.5] * u
         # noisy_tpms = tpms + rng.normal(-0.05, 0.05, tpms.shape)
         noisy_tpms = np.clip(noisy_tpms, 0, 1)
         true_scores = noisy_tpms
 
-    return tpms, true_scores, covs, loads
+        if noise_model == "ball":
+            error_est = np.sqrt(np.sum((tpms - true_scores) ** 2)) * 1.0
+            print("Error estimate is: ", error_est)
+        elif noise_model == "ellipse":
+            print("Error estimate is: ", error_est)
+
+        return tpms, true_scores, covs, loads, error_est
 
 
 # Implements https://ieeexplore.ieee.org/abstract/document/1181955

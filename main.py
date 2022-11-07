@@ -25,19 +25,12 @@ if __name__ == "__main__":
     noise_model = "ellipse"
 
     # Load in the estimated data matrix, and the true data matrix
-    tpms, true_scores, covs, loads = load_dset(dset_name, seed, data_dir, noise_model=noise_model)
+    tpms, true_scores, covs, loads, error_bound = load_dset(dset_name, seed, data_dir, noise_model=noise_model)
 
     # Save the data used for this run
     np.save("true_scores_%s_%d.npy" % (dset_name, seed), true_scores)
 
     # Run the max-min model
-    if noise_model == "ball":
-        error_bound = np.sqrt(np.sum((tpms - true_scores)**2)) * 1.0
-        print("Error bound is: ", error_bound)
-    elif noise_model == "ellipse":
-        error_bound = np.abs(tpms - true_scores) * 1.03
-        print("Error bound is: ", error_bound)
-
     # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
     fractional_alloc_max_min = solve_max_min(tpms, covs, loads, error_bound, noise_model=noise_model)
 

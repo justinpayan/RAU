@@ -117,7 +117,7 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
 
     # For adagrad
     cache = np.zeros(tpms.shape)
-    lr = .01
+    lr = .08
     eps = 1e-4
 
     # For vanilla

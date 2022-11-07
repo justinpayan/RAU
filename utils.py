@@ -34,52 +34,6 @@ def load_dset(dname, seed, data_dir="."):
 
     return tpms, true_scores, covs, loads
 
-# # If the path ends with a cycle, decycle.
-# # The path starts with a paper. We need to return the (reviewer, paper)
-# # edges that make up this path.
-# def decycle_and_return_edges(path, has_cycle):
-#
-#
-
-# # Finds a simple cycle or maximal path of paper-reviewer edges
-# # that have not been rounded
-# def find_path(fractional_alloc):
-#     frac_edges = np.where((0 < fractional_alloc) * (fractional_alloc < 1))
-#     paper_reviewer_edges = defaultdict(set)
-#     reviewer_paper_edges = defaultdict(set)
-#     for (r, p) in zip(frac_edges[0].tolist(), frac_edges[1].tolist()):
-#         paper_reviewer_edges[p].add(r)
-#         reviewer_paper_edges[r].add(p)
-#
-#     path = [frac_edges[0][1]]
-#     paper_or_reviewer = "paper"
-#     edge_maps = {"paper": paper_reviewer_edges,
-#                  "reviewer": reviewer_paper_edges}
-#
-#     for _ in range(fractional_alloc.shape[0] * fractional_alloc.shape[1]):
-#         curr = path[-1]
-#
-#         edges = edge_maps[paper_or_reviewer]
-#
-#         if curr not in edges:
-#             return decycle_and_return_edges(path, False)
-#
-#         for next in edges[curr]:
-#             if next not in path:
-#                 path.append(next)
-#                 break
-#             else:
-#                 path.append(next)
-#                 return decycle_and_return_edges(path, True)
-#
-#         if paper_or_reviewer == "paper":
-#             paper_or_reviewer = "reviewer"
-#         else:
-#             paper_or_reviewer = "paper"
-#
-#     # We should not get here
-#     assert False
-
 
 # Implements https://ieeexplore.ieee.org/abstract/document/1181955
 # Use bvn.cpp from https://github.com/theryanl/mitigating_manipulation_via_randomized_reviewer_assignment/blob/master/core/bvn.cpp

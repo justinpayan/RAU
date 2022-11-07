@@ -1,9 +1,41 @@
 
 import numpy as np
-from solve_usw import solve_usw_gurobi
+import os
 import cvxpy as cp
 import time
-from utils import bvn
+
+
+# Implements https://ieeexplore.ieee.org/abstract/document/1181955
+# Use bvn.cpp from https://github.com/theryanl/mitigating_manipulation_via_randomized_reviewer_assignment/blob/master/core/bvn.cpp
+def bvn(fractional_alloc):
+    # # While there are fractional edges, find a simple cycle or maximal path
+    # while np.any((0 < fractional_alloc) * (fractional_alloc < 1)):
+    #     # Find a simple cycle or maximal path
+    #     path = find_path(fractional_alloc)
+    with open("fractional_alloc.txt", 'w') as f:
+        m, n = fractional_alloc.shape
+        f.write("%d %d\n" % (m, n))
+        f.write("1\n"*m)
+        asst_str = ""
+        for r in range(m):
+            for p in range(n):
+                assn = 0
+                if not np.isclose(fractional_alloc[r, p], 0):
+                    assn = fractional_alloc[r, p]
+                asst_str += "%d %d %.6f\n" % (r, p+m, np.abs(assn))
+        f.write(asst_str[:-1])
+
+    os.system("/mnt/nfs/scratch1/jpayan/MinimalBidding/a.out < fractional_alloc.txt > output_bvn.txt")
+
+    rounded_alloc = np.zeros(fractional_alloc.shape)
+    with open("output_bvn.txt", 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            r, p = line.strip().split()
+            r = int(r)
+            p = int(p) - m
+            rounded_alloc[r, p] = 1
+    return rounded_alloc
 
 
 def get_worst_case(alloc, tpms, error_bound):

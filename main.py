@@ -22,17 +22,25 @@ if __name__ == "__main__":
     data_dir = args.data_dir
     seed = args.seed
 
+    noise_model = "ellipse"
+
     # Load in the estimated data matrix, and the true data matrix
-    tpms, true_scores, covs, loads = load_dset(dset_name, seed, data_dir)
+    tpms, true_scores, covs, loads = load_dset(dset_name, seed, data_dir, noise_model=noise_model)
 
     # Save the data used for this run
     np.save("true_scores_%s_%d.npy" % (dset_name, seed), true_scores)
 
     # Run the max-min model
-    error_bound = np.sqrt(np.sum((tpms - true_scores)**2)) * 1.0
-    print("Error bound is: ", error_bound)
+    if noise_model == "ball":
+        error_bound = np.sqrt(np.sum((tpms - true_scores)**2)) * 1.0
+        print("Error bound is: ", error_bound)
+    elif noise_model == "ellipse":
+        error_bound = np.abs(tpms - true_scores) * 1.03
+        print("Error bound is: ", error_bound)
+
     # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
-    fractional_alloc_max_min = solve_max_min(tpms, covs, loads, error_bound)
+    fractional_alloc_max_min = solve_max_min(tpms, covs, loads, error_bound, noise_model=noise_model)
+
     np.save("fractional_max_min_alloc_%s_%d.npy" % (dset_name, seed), fractional_alloc_max_min)
     # alloc_max_min = best_of_n_bvn(fractional_alloc_max_min, tpms, error_bound, n=10)
     alloc_max_min = bvn(fractional_alloc_max_min)
@@ -59,10 +67,10 @@ if __name__ == "__main__":
     print(np.all(np.sum(alloc_max_min, axis=0) == covs))
     true_obj_max_min = np.sum(alloc_max_min * true_scores)
 
-    worst_s = get_worst_case(alloc, tpms, error_bound)
+    worst_s = get_worst_case(alloc, tpms, error_bound, noise_model=noise_model)
     worst_case_obj_tpms = np.sum(worst_s * alloc)
 
-    worst_s = get_worst_case(alloc_max_min, tpms, error_bound)
+    worst_s = get_worst_case(alloc_max_min, tpms, error_bound, noise_model=noise_model)
     worst_case_obj_max_min = np.sum(worst_s * alloc_max_min)
 
     print("\n*******************\n*******************\n*******************\n")

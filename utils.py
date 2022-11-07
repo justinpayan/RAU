@@ -4,7 +4,9 @@ import os
 from solve_max_min import get_worst_case
 
 
-def load_dset(dname, seed, data_dir="."):
+def load_dset(dname, seed, data_dir=".", noise_model="ball"):
+    assert noise_model in ["ball", "ellipse"]
+
     tpms = np.load(os.path.join(data_dir, "data", dname, "scores.npy"))
     covs = np.load(os.path.join(data_dir, "data", dname, "covs.npy"))
     loads = np.load(os.path.join(data_dir, "data", dname, "loads.npy"))
@@ -26,11 +28,18 @@ def load_dset(dname, seed, data_dir="."):
     # true_scores = np.clip(true_scores, 0, np.inf)
     # true_scores /= np.max(true_scores)
 
-    # One way to sample true scores would be to assume papers are either liked or disliked
-    noisy_tpms = tpms + rng.normal(-0.05, 0.05, tpms.shape)
-    noisy_tpms = np.clip(noisy_tpms, 0, 1)
-    true_scores = noisy_tpms
-    # true_scores = rng.uniform(0, 1, size=tpms.shape) < noisy_tpms
+    if noise_model == "ball":
+        # One way to sample true scores would be to assume papers are either liked or disliked
+        noisy_tpms = tpms + rng.normal(-0.05, 0.05, tpms.shape)
+        noisy_tpms = np.clip(noisy_tpms, 0, 1)
+        true_scores = noisy_tpms
+        # true_scores = rng.uniform(0, 1, size=tpms.shape) < noisy_tpms
+    elif noise_model == "ellipse":
+        # Let's assume the noise is the same, but we just know more about it.
+        # Maybe this will need to change later.
+        noisy_tpms = tpms + rng.normal(-0.05, 0.05, tpms.shape)
+        noisy_tpms = np.clip(noisy_tpms, 0, 1)
+        true_scores = noisy_tpms
 
     return tpms, true_scores, covs, loads
 

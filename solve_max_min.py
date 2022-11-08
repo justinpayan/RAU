@@ -38,11 +38,11 @@ def bvn(fractional_alloc):
     return rounded_alloc
 
 
-def get_worst_case(alloc, tpms, error_bound, noise_model="ball"):
+def get_worst_case(alloc, tpms, error_distrib, u_mag, noise_model="ball"):
     if noise_model == "ball":
         s = cp.Variable(tpms.shape[0]*tpms.shape[1])
 
-        soc_constraint = [cp.SOC(error_bound, s - tpms.ravel())]
+        soc_constraint = [cp.SOC(u_mag, s - tpms.ravel())]
         prob = cp.Problem(cp.Minimize(alloc.ravel().T @ s),
                           soc_constraint + [s >= np.zeros(s.shape), s <= np.ones(s.shape)])
         prob.solve(solver='SCS')
@@ -51,13 +51,13 @@ def get_worst_case(alloc, tpms, error_bound, noise_model="ball"):
     elif noise_model == "ellipse":
         u = cp.Variable(tpms.shape[0] * tpms.shape[1])
 
-        soc_constraint = [cp.SOC(1, u)]
-        prob = cp.Problem(cp.Minimize(alloc.ravel().T @ (tpms.ravel() + cp.multiply(error_bound.ravel(), u))),
-                          soc_constraint + [(tpms.ravel() + cp.multiply(error_bound.ravel(), u)) >= np.zeros(u.shape),
-                                            (tpms.ravel() + cp.multiply(error_bound.ravel(), u)) <= np.ones(u.shape)])
+        soc_constraint = [cp.SOC(u_mag, u)]
+        prob = cp.Problem(cp.Minimize(alloc.ravel().T @ (tpms.ravel() + cp.multiply(error_distrib.ravel(), u))),
+                          soc_constraint + [(tpms.ravel() + cp.multiply(error_distrib.ravel(), u)) >= np.zeros(u.shape),
+                                            (tpms.ravel() + cp.multiply(error_distrib.ravel(), u)) <= np.ones(u.shape)])
         prob.solve(solver='SCS')
 
-        return tpms + error_bound * u.value.reshape(tpms.shape)
+        return tpms + error_distrib * u.value.reshape(tpms.shape)
 
 
 def project_to_feasible(alloc, covs, loads, use_verbose=False):
@@ -99,7 +99,7 @@ def project_to_integer(alloc, covs, loads, use_verbose=False):
 # that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
 # out the maximin assignment where we worst-case over the true scores within "error_bound" of
 # the tpms scores.
-def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
+def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
     assert noise_model in ["ball", "ellipse"]
 
     st = time.time()
@@ -134,14 +134,16 @@ def solve_max_min(tpms, covs, loads, error_bound, noise_model="ball"):
         print("%s elapsed" % (time.time() - st))
 
         # worst case depends on noise model.
-        worst_s = get_worst_case(alloc, tpms, error_bound, noise_model=noise_model)
+        worst_s = get_worst_case(alloc, tpms, error_distrib, u_mag, noise_model=noise_model)
 
         if noise_model == "ball":
             diff = np.sqrt(np.sum((worst_s - tpms)**2))
-            assert diff-1e-2 <= error_bound
+            assert diff-1e-2 <= u_mag
         elif noise_model == "ellipse":
             diff = np.abs(worst_s - tpms)
-            assert np.all(diff-1e-2 < error_bound)
+            empirical_u = (1/(error_distrib+1e-9))*diff
+            empirical_u_mag = np.sqrt(np.sum(empirical_u**2))
+            assert np.all(empirical_u_mag-1e-2 < u_mag)
 
         # Update the allocation
         # 1, compute the gradient (I think it's just the value of the worst s, but check to be sure).

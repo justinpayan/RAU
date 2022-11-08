@@ -6,7 +6,7 @@ from solve_max_min import get_worst_case
 from solve_usw import solve_usw_gurobi
 
 
-def load_dset(dname, seed, data_dir=".", noise_model="ball"):
+def load_dset(dname, seed, data_dir=".", noise_model="ball", alpha=0.5):
     assert noise_model in ["ball", "ellipse"]
 
     tpms = np.load(os.path.join(data_dir, "data", dname, "scores.npy"))
@@ -36,7 +36,11 @@ def load_dset(dname, seed, data_dir=".", noise_model="ball"):
         noisy_tpms = np.clip(noisy_tpms, 0, 1)
         true_scores = noisy_tpms
         # true_scores = rng.uniform(0, 1, size=tpms.shape) < noisy_tpms
-        return tpms, true_scores, covs, loads
+
+        error_distrib = np.sqrt(np.sum((tpms - true_scores) ** 2)) * 1.0
+        print("Error estimate is: ", error_distrib)
+
+        return tpms, true_scores, covs, loads, error_distrib, None
     elif noise_model == "ellipse":
         # Let's assume the noise is the same, but we just know more about it.
         # Maybe this will need to change later.
@@ -45,28 +49,47 @@ def load_dset(dname, seed, data_dir=".", noise_model="ball"):
         # noise[alloc < 0.5] = 0
         # noisy_tpms = tpms + noise
 
-        error_est = np.zeros(tpms.shape)
-        error_est[alloc > 0.5] = 50
+        num_assts = np.where(alloc > 0.5)[0].shape[0]
+        num_nonassts = np.where(alloc < 0.5)[0].shape[0]
+        num_errors_on_non_tpms = num_assts*alpha
+        num_errors_on_tpms = num_assts*(1-alpha)
 
-        # Ensure that the L2 norm of u is = 1
-        num_errors = np.where(alloc > 0.5)[0].shape[0]
-        u = rng.uniform(size=num_errors)
-        u /= u.sum()
-        u = np.sqrt(u)
+        error_distrib = np.zeros(tpms.shape)
+        error_distrib[alloc > 0.5] = rng.uniform(size=num_assts)
+        error_distrib[alloc > 0.5] /= error_distrib[alloc > 0.5].sum()
+        error_distrib[alloc > 0.5] *= num_errors_on_tpms
+
+        error_distrib[alloc < 0.5] = rng.uniform(size=num_nonassts)
+        error_distrib[alloc < 0.5] /= error_distrib[alloc < 0.5].sum()
+        error_distrib[alloc < 0.5] *= num_errors_on_non_tpms
+
+        # Ensure that the L2 norm of u is = u_mag
+        # And that the portion of u on the TPMS assignments is 1-alpha.
+        u_mag = 50
+
+        u = rng.uniform(size=tpms.shape)
+        u[alloc > 0.5] *= (1 - alpha) / u[alloc > 0.5].sum()
+        u[alloc < 0.5] *= alpha / u[alloc < 0.5].sum()
+
+        u *= u_mag / np.sqrt(np.sum(u**2))
+
+        print("L2 norm of u should be %.2f, it is %.2f" % (u_mag, np.sqrt(np.sum(u**2))))
+        print("Concentration of u on TPMS assignments should be %.2f, it is %.2f" %
+              (1-alpha, np.sum(u[alloc > 0.5])/np.sum(u)))
+        print("Sum of error_distrib on TPMS assignments should be %.2f, it is %.2f" %
+              (num_errors_on_tpms, error_distrib[alloc > 0.5].sum()))
+        print("Sum of error_distrib on non-TPMS assignments should be %.2f, it is %.2f" %
+              (num_errors_on_non_tpms, error_distrib[alloc < 0.5].sum()))
 
         noisy_tpms = tpms.copy()
-        noisy_tpms[alloc > 0.5] = noisy_tpms[alloc > 0.5] - error_est[alloc > 0.5] * u
+        noisy_tpms = noisy_tpms - error_distrib * u
         # noisy_tpms = tpms + rng.normal(-0.05, 0.05, tpms.shape)
         noisy_tpms = np.clip(noisy_tpms, 0, 1)
         true_scores = noisy_tpms
 
-        if noise_model == "ball":
-            error_est = np.sqrt(np.sum((tpms - true_scores) ** 2)) * 1.0
-            print("Error estimate is: ", error_est)
-        elif noise_model == "ellipse":
-            print("Error estimate is: ", error_est)
+        print("Error estimate is: ", error_distrib)
 
-        return tpms, true_scores, covs, loads, error_est
+        return tpms, true_scores, covs, loads, error_distrib, u_mag
 
 
 # Implements https://ieeexplore.ieee.org/abstract/document/1181955

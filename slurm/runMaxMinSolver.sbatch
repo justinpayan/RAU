@@ -6,8 +6,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --nodelist=swarm080
-#SBATCH --time=00-06:00:00
-#SBATCH --partition=longq
+#SBATCH --time=00-09:00:00
+#SBATCH --partition=defq
 
 DATASET=midl
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding

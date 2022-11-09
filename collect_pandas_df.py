@@ -12,11 +12,11 @@ if __name__ == "__main__":
                 all_data.append([alpha,
                                  seed,
                                  100*x['worst_usw_tpms']/opt_usw,
-                                 100*x['worst_usw_maximin']/opt_usw,
+                                 100*x['worst_usw_maxmin']/opt_usw,
                                  100*x['true_usw_tpms']/opt_usw,
-                                 100*x['true_usw_maximin']/opt_usw]
+                                 100*x['true_usw_maxmin']/opt_usw]
                                 )
     df = pd.DataFrame(all_data)
     df.columns = [["alpha", "seed", "worst_usw_tpms",
-                   "worst_usw_maximin", "true_usw_tpms", "true_usw_maximin"]]
+                   "worst_usw_maxmin", "true_usw_tpms", "true_usw_maxmin"]]
     df.to_csv("stat_df_midl.csv")

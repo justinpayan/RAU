@@ -6,7 +6,7 @@ if __name__ == "__main__":
     all_data = []
     for alpha in np.arange(0, 1.01, .1):
         for seed in range(10):
-            with open("stat_dict_midl_%d_%.1f.pkl", 'rb') as f:
+            with open("slurm/stat_dict_midl_%d_%.1f.pkl" % (seed, alpha), 'rb') as f:
                 x = pickle.load(f)
                 opt_usw = x['opt_usw']
                 all_data.append([alpha,

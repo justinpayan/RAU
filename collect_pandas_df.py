@@ -22,4 +22,4 @@ if __name__ == "__main__":
     df = pd.DataFrame(all_data)
     df.columns = [["alpha", "seed", "worst_usw_tpms",
                    "worst_usw_maxmin", "true_usw_tpms", "true_usw_maxmin"]]
-    df.to_csv("stat_df_midl.csv")
+    df.to_csv("stat_df_midl.csv", index=False)

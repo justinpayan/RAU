@@ -27,10 +27,10 @@ if __name__ == "__main__":
             fname = "stat_dict_iclr_%d_%d.pkl" % (year, seed)
             if not os.path.isfile(fname):
                 # Load in the ellipse
-                std_devs = np.load("scores_sigma_iclr_%d.npy" % year)
+                std_devs = np.load(os.path.join("data", "iclr", "scores_sigma_iclr_%d.npy" % year))
                 error_distrib = 2 * std_devs
                 u_mag = 1
-                means = np.load("scores_mu_iclr_%d.npy" % year)
+                means = np.load(os.path.join("data", "iclr", "scores_mu_iclr_%d.npy" % year))
 
                 # Take a subsample of the reviewers and papers
                 m, n = means.shape

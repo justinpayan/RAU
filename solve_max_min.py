@@ -126,7 +126,7 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
         print(np.sum(np.abs(np.sum(u, axis=0) - covs)))
 
         # Reviewer load bounds
-        new_u = (u + z_rev_load).copy
+        new_u = (u + z_rev_load).copy()
         true_load = np.sum(alloc, axis=1)
         proj_new_u = u - (np.clip(true_load - loads, 0, None) / n).reshape((-1, 1))
         z_rev_load = new_u - proj_new_u

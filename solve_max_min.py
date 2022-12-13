@@ -55,7 +55,7 @@ def get_worst_case(alloc, tpms, std_devs, noise_model="ball"):
     elif noise_model == "ellipse":
         u = cp.Variable(tpms.shape[0] * tpms.shape[1])
 
-        soc_constraint = [cp.SOC(chi2.ppf(.95, alloc.size), cp.multiply(u-tpms.ravel(), 1/std_devs.ravel()))]
+        soc_constraint = [cp.SOC(np.sqrt(chi2.ppf(.95, alloc.size)), cp.multiply(u-tpms.ravel(), 1/std_devs.ravel()))]
         prob = cp.Problem(cp.Minimize(alloc.ravel().T @ u),
                           soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
         prob.solve(solver='SCS')

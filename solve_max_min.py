@@ -98,30 +98,42 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
     while not converged:
         # Project to each constraint
         # LB
-        new_u = u + z_lb
+        new_u = (u + z_lb).copy()
         proj_new_u = np.clip(new_u, 0, None)
         z_lb = new_u - proj_new_u
         u = proj_new_u
 
+        print("Violation of LB")
+        print(np.abs(np.sum(u[u < 0])))
+
         # UB
-        new_u = u + z_ub
+        new_u = (u + z_ub).copy()
         proj_new_u = np.clip(new_u, None, 1)
         z_ub = new_u - proj_new_u
         u = proj_new_u
 
+        print("Violation of UB")
+        print(np.sum(np.clip(u - np.ones(u.shape), 0, None)))
+
         # Paper coverage
-        new_u = u + z_pap_cov
+        new_u = (u + z_pap_cov).copy()
         true_cov = np.sum(alloc, axis=0)
         proj_new_u = u - ((true_cov - covs) / m).reshape((1, -1))
         z_pap_cov = new_u - proj_new_u
         u = proj_new_u
 
+        print("Violation of paper cov")
+        print(np.sum(np.abs(np.sum(u, axis=0) - covs)))
+
         # Reviewer load bounds
-        new_u = u + z_rev_load
+        new_u = (u + z_rev_load).copy
         true_load = np.sum(alloc, axis=1)
         proj_new_u = u - (np.clip(true_load - loads, 0, None) / n).reshape((-1, 1))
         z_rev_load = new_u - proj_new_u
         u = proj_new_u
+
+        print("Violation of review loads")
+        print(np.sum(np.clip(np.sum(u, axis=1) - loads, 0, None)), flush=True)
 
         # Let's say we've converged when none of the constraints is too far violated.
         print("Violation of LB")

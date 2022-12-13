@@ -5,7 +5,7 @@
 #SBATCH --error=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding/iclr_tests.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --nodelist=swarm080
+#SBATCH --nodelist=swarm082
 #SBATCH --time=06-00:00:00
 #SBATCH --partition=longq
 

@@ -5,7 +5,7 @@
 #SBATCH --error=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding/midl_minmaxsolver.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --nodelist=swarm080
+#SBATCH --nodelist=swarm082
 #SBATCH --time=00-09:00:00
 #SBATCH --partition=defq
 

@@ -3,6 +3,8 @@ import os
 import cvxpy as cp
 import time
 
+from solve_usw import solve_usw_gurobi
+
 
 # Implements https://ieeexplore.ieee.org/abstract/document/1181955
 # Use bvn.cpp from https://github.com/theryanl/mitigating_manipulation_via_randomized_reviewer_assignment/blob/master/core/bvn.cpp
@@ -103,17 +105,11 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
         z_lb = new_u - proj_new_u
         u = proj_new_u
 
-        print("Violation of LB")
-        print(np.abs(np.sum(u[u < 0])))
-
         # UB
         new_u = (u + z_ub).copy()
         proj_new_u = np.clip(new_u, None, 1)
         z_ub = new_u - proj_new_u
         u = proj_new_u
-
-        print("Violation of UB")
-        print(np.sum(np.clip(u - np.ones(u.shape), 0, None)))
 
         # Paper coverage
         new_u = (u + z_pap_cov).copy()
@@ -122,9 +118,6 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
         z_pap_cov = new_u - proj_new_u
         u = proj_new_u
 
-        print("Violation of paper cov")
-        print(np.sum(np.abs(np.sum(u, axis=0) - covs)))
-
         # Reviewer load bounds
         new_u = (u + z_rev_load).copy()
         true_load = np.sum(new_u, axis=1)
@@ -132,18 +125,15 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
         z_rev_load = new_u - proj_new_u
         u = proj_new_u
 
-        print("Violation of review loads")
-        print(np.sum(np.clip(np.sum(u, axis=1) - loads, 0, None)), flush=True)
-
         # Let's say we've converged when none of the constraints is too far violated.
-        print("Violation of LB")
-        print(np.abs(np.sum(u[u < 0])))
-        print("Violation of UB")
-        print(np.sum(np.clip(u - np.ones(u.shape), 0, None)))
-        print("Violation of paper cov")
-        print(np.sum(np.abs(np.sum(u, axis=0) - covs)))
-        print("Violation of review loads")
-        print(np.sum(np.clip(np.sum(u, axis=1) - loads, 0, None)), flush=True)
+        # print("Violation of LB")
+        # print(np.abs(np.sum(u[u < 0])))
+        # print("Violation of UB")
+        # print(np.sum(np.clip(u - np.ones(u.shape), 0, None)))
+        # print("Violation of paper cov")
+        # print(np.sum(np.abs(np.sum(u, axis=0) - covs)))
+        # print("Violation of review loads")
+        # print(np.sum(np.clip(np.sum(u, axis=1) - loads, 0, None)), flush=True)
         if np.abs(np.sum(u[u < 0])) < .1 and \
                 np.sum(np.clip(u - np.ones(u.shape), 0, None)) < .1 and \
                 np.sum(np.abs(np.sum(u, axis=0) - covs)) < .1 and \
@@ -179,9 +169,10 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
 
     st = time.time()
     print("Solving for initial max USW alloc", flush=True)
-    # _, alloc = solve_usw_gurobi(tpms, covs, loads)
-    alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
-    alloc = project_to_feasible(alloc, covs, loads)
+    _, alloc = solve_usw_gurobi(tpms, covs, loads)
+    # alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
+    # alloc = np.clip(alloc, 0, 1)
+    # alloc = project_to_feasible(alloc, covs, loads)
 
     global_opt_obj = 0.0
     global_opt_alloc = alloc.copy()

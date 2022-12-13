@@ -124,6 +124,14 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
         u = proj_new_u
 
         # Let's say we've converged when none of the constraints is too far violated.
+        print("Violation of LB")
+        print(np.abs(np.sum(u[u < 0])))
+        print("Violation of UB")
+        print(np.sum(np.clip(u - np.ones(u.shape), 0, None)))
+        print("Violation of paper cov")
+        print(np.sum(np.abs(np.sum(u, axis=0) - covs)))
+        print("Violation of review loads")
+        print(np.sum(np.clip(np.sum(u, axis=1) - loads, 0, None)), flush=True)
         if np.abs(np.sum(u[u < 0])) < .1 and \
                 np.sum(np.clip(u - np.ones(u.shape), 0, None)) < .1 and \
                 np.sum(np.abs(np.sum(u, axis=0) - covs)) < .1 and \

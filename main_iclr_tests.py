@@ -28,8 +28,6 @@ if __name__ == "__main__":
             if not os.path.isfile(fname):
                 # Load in the ellipse
                 std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
-                error_distrib = 2 * std_devs
-                u_mag = 1
                 means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
 
                 # Take a subsample of the reviewers and papers
@@ -37,19 +35,19 @@ if __name__ == "__main__":
                 sampled_revs = np.random.choice(range(m), math.floor(.9*m))
                 sampled_paps = np.random.choice(range(n), math.floor(.9*n))
 
-                error_distrib = error_distrib[sampled_revs, :][:, sampled_paps]
+                std_devs = std_devs[sampled_revs, :][:, sampled_paps]
                 means = means[sampled_revs, :][:, sampled_paps]
 
                 covs = np.ones(math.floor(.9*n)) * 3
                 loads = np.ones(math.floor(.9*m)) * 6
 
                 # Save the data used for this run
-                np.save(os.path.join(data_dir, "outputs", "error_distrib_iclr_%d_%d.npy" % (year, seed)), error_distrib)
+                np.save(os.path.join(data_dir, "outputs", "std_devs_iclr_%d_%d.npy" % (year, seed)), std_devs)
                 np.save(os.path.join(data_dir, "outputs", "means_iclr_%d_%d.npy" % (year, seed)), means)
 
                 # Run the max-min model
                 # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
-                fractional_alloc_max_min = solve_max_min(means, covs, loads, error_distrib, u_mag, noise_model=noise_model)
+                fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model)
 
                 np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_iclr_%d_%d.npy" % (year, seed)), fractional_alloc_max_min)
                 # alloc_max_min = best_of_n_bvn(fractional_alloc_max_min, tpms, error_bound, n=10)
@@ -76,10 +74,10 @@ if __name__ == "__main__":
                 print(np.all(np.sum(alloc_max_min, axis=1) <= loads))
                 print(np.all(np.sum(alloc_max_min, axis=0) == covs))
 
-                worst_s = get_worst_case(alloc, means, error_distrib, u_mag, noise_model=noise_model)
+                worst_s = get_worst_case(alloc, means, std_devs, noise_model=noise_model)
                 worst_case_obj_tpms = np.sum(worst_s * alloc)
 
-                worst_s = get_worst_case(alloc_max_min, means, error_distrib, u_mag, noise_model=noise_model)
+                worst_s = get_worst_case(alloc_max_min, means, std_devs, noise_model=noise_model)
                 worst_case_obj_max_min = np.sum(worst_s * alloc_max_min)
 
                 stat_dict = {}

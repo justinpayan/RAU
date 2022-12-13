@@ -239,7 +239,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
 
         # Project to the set of feasible allocations
         print("Projecting to feasible set: %s elapsed" % (time.time() - st), flush=True)
-        alloc = project_to_feasible(alloc, covs, loads, max_iter=10000)
+        alloc = project_to_feasible(alloc, covs, loads, max_iter=1500)
 
         # alloc = bvn(alloc)
 

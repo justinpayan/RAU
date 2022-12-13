@@ -1,4 +1,3 @@
-
 import numpy as np
 import os
 import cvxpy as cp
@@ -15,14 +14,14 @@ def bvn(fractional_alloc):
     with open("fractional_alloc.txt", 'w') as f:
         m, n = fractional_alloc.shape
         f.write("%d %d\n" % (m, n))
-        f.write("1\n"*m)
+        f.write("1\n" * m)
         asst_str = ""
         for r in range(m):
             for p in range(n):
                 assn = 0
                 if not np.isclose(fractional_alloc[r, p], 0):
                     assn = fractional_alloc[r, p]
-                asst_str += "%d %d %.6f\n" % (r, p+m, np.abs(assn))
+                asst_str += "%d %d %.6f\n" % (r, p + m, np.abs(assn))
         f.write(asst_str[:-1])
 
     os.system("/mnt/nfs/scratch1/jpayan/MinimalBidding/a.out < fractional_alloc.txt > output_bvn.txt")
@@ -40,7 +39,7 @@ def bvn(fractional_alloc):
 
 def get_worst_case(alloc, tpms, error_distrib, u_mag, noise_model="ball"):
     if noise_model == "ball":
-        s = cp.Variable(tpms.shape[0]*tpms.shape[1])
+        s = cp.Variable(tpms.shape[0] * tpms.shape[1])
 
         soc_constraint = [cp.SOC(u_mag, s - tpms.ravel())]
         prob = cp.Problem(cp.Minimize(alloc.ravel().T @ s),
@@ -60,22 +59,76 @@ def get_worst_case(alloc, tpms, error_distrib, u_mag, noise_model="ball"):
         return tpms + error_distrib * u.value.reshape(tpms.shape)
 
 
+# def project_to_feasible(alloc, covs, loads, use_verbose=False):
+#     # The allocation probably violates the coverage and reviewer load bounds.
+#     # Find the allocation with the smallest L2 distance from the current one such
+#     # that the constraints are satisfied
+#     x = cp.Variable(shape=alloc.shape)
+#     m, n = alloc.shape
+#     cost = cp.sum_squares(x - alloc)
+#     n_vec = np.ones((n, 1))
+#     m_vec = np.ones((m, 1))
+#     constraints = [x @ n_vec <= loads.reshape((m, 1)),
+#                    x.T @ m_vec == covs.reshape((n, 1)),
+#                    x >= np.zeros(x.shape),
+#                    x <= np.ones(x.shape)]
+#     prob = cp.Problem(cp.Minimize(cost), constraints)
+#     prob.solve(verbose=use_verbose)
+#     return x.value
+
 def project_to_feasible(alloc, covs, loads, use_verbose=False):
     # The allocation probably violates the coverage and reviewer load bounds.
     # Find the allocation with the smallest L2 distance from the current one such
     # that the constraints are satisfied
-    x = cp.Variable(shape=alloc.shape)
+
+    # This version uses Dykstra's projection algorithm to repeatedly project onto
+    # each constraint and converge to the point in all constraint sets with smallest
+    # Euclidean distance.
     m, n = alloc.shape
-    cost = cp.sum_squares(x - alloc)
-    n_vec = np.ones((n, 1))
-    m_vec = np.ones((m, 1))
-    constraints = [x @ n_vec <= loads.reshape((m, 1)),
-                   x.T @ m_vec == covs.reshape((n, 1)),
-                   x >= np.zeros(x.shape),
-                   x <= np.ones(x.shape)]
-    prob = cp.Problem(cp.Minimize(cost), constraints)
-    prob.solve(verbose=use_verbose)
-    return x.value
+
+    z_lb = np.zeros(alloc.shape)
+    z_ub = np.zeros(alloc.shape)
+    z_pap_cov = np.zeros(alloc.shape)
+    z_rev_load = np.zeros(alloc.shape)
+
+    u = alloc.copy()
+
+    converged = False
+
+    while not converged:
+        u_at_start = u.copy()
+        # Project to each constraint
+        # LB
+        new_u = u + z_lb
+        proj_new_u = np.clip(new_u, 0, None)
+        z_lb = new_u - proj_new_u
+        u = proj_new_u
+
+        # UB
+        new_u = u + z_ub
+        proj_new_u = np.clip(new_u, None, 1)
+        z_ub = new_u - proj_new_u
+        u = proj_new_u
+
+        # Paper coverage
+        new_u = u + z_pap_cov
+        true_cov = np.sum(alloc, axis=0)
+        proj_new_u = u - (true_cov - covs) / m
+        z_pap_cov = new_u - proj_new_u
+        u = proj_new_u
+
+        # Reviewer load bounds
+        new_u = u + z_rev_load
+        true_load = np.sum(alloc, axis=1)
+        proj_new_u = u - np.clip(true_load - loads, 0, None) / n
+        z_rev_load = new_u - proj_new_u
+        u = proj_new_u
+
+        print("Updated by %.3f" % np.linalg.norm(u - u_at_start))
+        if np.linalg.norm(u - u_at_start) < 1e-3:
+            converged = True
+
+    return u
 
 
 def project_to_integer(alloc, covs, loads, use_verbose=False):
@@ -137,13 +190,13 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
         worst_s = get_worst_case(alloc, tpms, error_distrib, u_mag, noise_model=noise_model)
 
         if noise_model == "ball":
-            diff = np.sqrt(np.sum((worst_s - tpms)**2))
-            assert diff-1e-2 <= u_mag
+            diff = np.sqrt(np.sum((worst_s - tpms) ** 2))
+            assert diff - 1e-2 <= u_mag
         elif noise_model == "ellipse":
             diff = np.abs(worst_s - tpms)
-            empirical_u = (1/(error_distrib+1e-9))*diff
-            empirical_u_mag = np.sqrt(np.sum(empirical_u**2))
-            assert np.all(empirical_u_mag-1e-2 < u_mag)
+            empirical_u = (1 / (error_distrib + 1e-9)) * diff
+            empirical_u_mag = np.sqrt(np.sum(empirical_u ** 2))
+            assert np.all(empirical_u_mag - 1e-2 < u_mag)
 
         # Update the allocation
         # 1, compute the gradient (I think it's just the value of the worst s, but check to be sure).
@@ -182,7 +235,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
 
         if t % 1 == 0:
             print("Step %d" % t)
-            print("Obj value: ", np.sum(old_alloc*worst_s))
+            print("Obj value: ", np.sum(old_alloc * worst_s))
             print("%s elapsed" % (time.time() - st), flush=True)
 
     return global_opt_alloc
@@ -213,8 +266,8 @@ def solve_max_min_project_each_step(tpms, covs, loads, error_bound):
         print("%s elapsed" % (time.time() - st))
         worst_s = get_worst_case(alloc, tpms, error_bound)
 
-        diff = np.sqrt(np.sum((worst_s - tpms)**2))
-        assert diff-1e-2 <= error_bound
+        diff = np.sqrt(np.sum((worst_s - tpms) ** 2))
+        assert diff - 1e-2 <= error_bound
 
         # Update the allocation
         # 1, compute the gradient (I think it's just the value of the worst s, but check to be sure).
@@ -224,7 +277,7 @@ def solve_max_min_project_each_step(tpms, covs, loads, error_bound):
         old_alloc = alloc.copy()
         alloc_grad = worst_s
 
-        rate = 1/(t+1)
+        rate = 1 / (t + 1)
         updated = False
         while not updated:
             alloc = old_alloc + rate * alloc_grad
@@ -240,7 +293,7 @@ def solve_max_min_project_each_step(tpms, covs, loads, error_bound):
             else:
                 updated = True
 
-        prev_obj_val = np.sum(old_alloc*worst_s)
+        prev_obj_val = np.sum(old_alloc * worst_s)
         if prev_obj_val > global_opt_obj:
             global_opt_obj = prev_obj_val
             global_opt_alloc = old_alloc

@@ -100,6 +100,8 @@ def project_to_feasible(alloc, covs, loads, max_iter=np.inf):
 
     while not converged and t < max_iter:
         t += 1
+        if t % 10 == 0:
+            print("Projection iteration %d" % t, flush=True)
         # Project to each constraint
         # LB
         new_u = (u + z_lb).copy()

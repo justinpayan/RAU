@@ -103,7 +103,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
     assert noise_model in ["ball", "ellipse"]
 
     st = time.time()
-    print("Solving for initial max USW alloc")
+    print("Solving for initial max USW alloc", flush=True)
     # _, alloc = solve_usw_gurobi(tpms, covs, loads)
     alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
     alloc = project_to_feasible(alloc, covs, loads)
@@ -111,7 +111,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
     global_opt_obj = 0.0
     global_opt_alloc = alloc.copy()
 
-    print("Solving max min: %s elapsed" % (time.time() - st))
+    print("Solving max min: %s elapsed" % (time.time() - st), flush=True)
 
     converged = False
     max_iter = 300
@@ -131,7 +131,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
     while not converged and t < max_iter:
         # Compute the worst-case S matrix using second order cone programming
         print("Computing worst case S matrix")
-        print("%s elapsed" % (time.time() - st))
+        print("%s elapsed" % (time.time() - st), flush=True)
 
         # worst case depends on noise model.
         worst_s = get_worst_case(alloc, tpms, error_distrib, u_mag, noise_model=noise_model)
@@ -160,7 +160,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
         alloc = alloc + lr * alloc_grad
 
         # Project to the set of feasible allocations
-        print("Projecting to feasible set: %s elapsed" % (time.time() - st))
+        print("Projecting to feasible set: %s elapsed" % (time.time() - st), flush=True)
         alloc = project_to_feasible(alloc, covs, loads)
 
         # alloc = bvn(alloc)
@@ -183,7 +183,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
         if t % 1 == 0:
             print("Step %d" % t)
             print("Obj value: ", np.sum(old_alloc*worst_s))
-            print("%s elapsed" % (time.time() - st))
+            print("%s elapsed" % (time.time() - st), flush=True)
 
     return global_opt_alloc
 

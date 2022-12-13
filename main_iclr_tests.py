@@ -57,7 +57,7 @@ if __name__ == "__main__":
                 np.save(os.path.join(data_dir, "outputs", "max_min_alloc_iclr_%d_%d.npy" % (year, seed)), alloc_max_min)
 
                 # Run the baseline, which is just TPMS
-                print("Solving for max USW using TPMS scores")
+                print("Solving for max USW using TPMS scores", flush=True)
                 objective_score, alloc = solve_usw_gurobi(means, covs, loads)
 
                 np.save(os.path.join(data_dir, "outputs", "tpms_alloc_iclr_%d_%d.npy" % (year, seed)), alloc)

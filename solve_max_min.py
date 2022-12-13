@@ -124,7 +124,7 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
         z_rev_load = new_u - proj_new_u
         u = proj_new_u
 
-        print("Updated by %.3f" % np.linalg.norm(u - u_at_start))
+        print("Updated by %.3f" % np.linalg.norm(u - u_at_start), flush=True)
         if np.linalg.norm(u - u_at_start) < 1e-3:
             converged = True
 

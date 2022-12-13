@@ -27,10 +27,10 @@ if __name__ == "__main__":
             fname = "stat_dict_iclr_%d_%d.pkl" % (year, seed)
             if not os.path.isfile(fname):
                 # Load in the ellipse
-                std_devs = np.load(os.path.join("data", "iclr", "scores_sigma_iclr_%d.npy" % year))
+                std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
                 error_distrib = 2 * std_devs
                 u_mag = 1
-                means = np.load(os.path.join("data", "iclr", "scores_mu_iclr_%d.npy" % year))
+                means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
 
                 # Take a subsample of the reviewers and papers
                 m, n = means.shape
@@ -44,23 +44,23 @@ if __name__ == "__main__":
                 loads = np.ones(math.floor(.9*m)) * 6
 
                 # Save the data used for this run
-                np.save("error_distrib_iclr_%d_%d.npy" % (year, seed), error_distrib)
-                np.save("means_iclr_%d_%d.npy" % (year, seed), means)
+                np.save(os.path.join(data_dir, "outputs", "error_distrib_iclr_%d_%d.npy" % (year, seed)), error_distrib)
+                np.save(os.path.join(data_dir, "outputs", "means_iclr_%d_%d.npy" % (year, seed)), means)
 
                 # Run the max-min model
                 # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
                 fractional_alloc_max_min = solve_max_min(means, covs, loads, error_distrib, u_mag, noise_model=noise_model)
 
-                np.save("fractional_max_min_alloc_iclr_%d_%d.npy" % (year, seed), fractional_alloc_max_min)
+                np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_iclr_%d_%d.npy" % (year, seed)), fractional_alloc_max_min)
                 # alloc_max_min = best_of_n_bvn(fractional_alloc_max_min, tpms, error_bound, n=10)
                 alloc_max_min = bvn(fractional_alloc_max_min)
-                np.save("max_min_alloc_iclr_%d_%d.npy" % (year, seed), alloc_max_min)
+                np.save(os.path.join(data_dir, "outputs", "max_min_alloc_iclr_%d_%d.npy" % (year, seed)), alloc_max_min)
 
                 # Run the baseline, which is just TPMS
                 print("Solving for max USW using TPMS scores")
                 objective_score, alloc = solve_usw_gurobi(means, covs, loads)
 
-                np.save("tpms_alloc_iclr_%d_%d.npy" % (year, seed), alloc)
+                np.save(os.path.join(data_dir, "outputs", "tpms_alloc_iclr_%d_%d.npy" % (year, seed)), alloc)
 
                 # true_obj = np.sum(alloc * true_scores)
 
@@ -103,4 +103,4 @@ if __name__ == "__main__":
                 # print("Efficiency loss for max_min (percent of opt): %.2f" % (100 * (opt - true_obj_max_min) / opt))
 
                 with open(fname, 'wb') as f:
-                    pickle.dump(stat_dict, f)
+                    pickle.dump(os.path.join(data_dir, "outputs", stat_dict), f)

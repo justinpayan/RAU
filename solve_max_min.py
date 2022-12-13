@@ -113,14 +113,14 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
         # Paper coverage
         new_u = u + z_pap_cov
         true_cov = np.sum(alloc, axis=0)
-        proj_new_u = u - (true_cov - covs) / m
+        proj_new_u = u - ((true_cov - covs) / m).reshape((1, -1))
         z_pap_cov = new_u - proj_new_u
         u = proj_new_u
 
         # Reviewer load bounds
         new_u = u + z_rev_load
         true_load = np.sum(alloc, axis=1)
-        proj_new_u = u - np.clip(true_load - loads, 0, None) / n
+        proj_new_u = u - (np.clip(true_load - loads, 0, None) / n).reshape((-1, 1))
         z_rev_load = new_u - proj_new_u
         u = proj_new_u
 

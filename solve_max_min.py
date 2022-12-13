@@ -96,7 +96,6 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
     converged = False
 
     while not converged:
-        u_at_start = u.copy()
         # Project to each constraint
         # LB
         new_u = u + z_lb
@@ -124,8 +123,11 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
         z_rev_load = new_u - proj_new_u
         u = proj_new_u
 
-        print("Updated by %.3f" % np.linalg.norm(u - u_at_start), flush=True)
-        if np.linalg.norm(u - u_at_start) < 1e-3:
+        # Let's say we've converged when none of the constraints is too far violated.
+        if np.abs(np.sum(u[u < 0])) < .1 and \
+                np.sum(np.clip(u - np.ones(u.shape), 0, None)) < .1 and \
+                np.sum(np.abs(np.sum(u, axis=0) - covs)) < .1 and \
+                np.sum(np.clip(np.sum(u, axis=1) - loads, 0, None)) < .1:
             converged = True
 
     return u

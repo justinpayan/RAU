@@ -61,22 +61,22 @@ def get_worst_case(alloc, tpms, error_distrib, u_mag, noise_model="ball"):
         return tpms + error_distrib * u.value.reshape(tpms.shape)
 
 
-# def project_to_feasible(alloc, covs, loads, use_verbose=False):
-#     # The allocation probably violates the coverage and reviewer load bounds.
-#     # Find the allocation with the smallest L2 distance from the current one such
-#     # that the constraints are satisfied
-#     x = cp.Variable(shape=alloc.shape)
-#     m, n = alloc.shape
-#     cost = cp.sum_squares(x - alloc)
-#     n_vec = np.ones((n, 1))
-#     m_vec = np.ones((m, 1))
-#     constraints = [x @ n_vec <= loads.reshape((m, 1)),
-#                    x.T @ m_vec == covs.reshape((n, 1)),
-#                    x >= np.zeros(x.shape),
-#                    x <= np.ones(x.shape)]
-#     prob = cp.Problem(cp.Minimize(cost), constraints)
-#     prob.solve(verbose=use_verbose)
-#     return x.value
+def project_to_feasible_exact(alloc, covs, loads, use_verbose=False):
+    # The allocation probably violates the coverage and reviewer load bounds.
+    # Find the allocation with the smallest L2 distance from the current one such
+    # that the constraints are satisfied
+    x = cp.Variable(shape=alloc.shape)
+    m, n = alloc.shape
+    cost = cp.sum_squares(x - alloc)
+    n_vec = np.ones((n, 1))
+    m_vec = np.ones((m, 1))
+    constraints = [x @ n_vec <= loads.reshape((m, 1)),
+                   x.T @ m_vec == covs.reshape((n, 1)),
+                   x >= np.zeros(x.shape),
+                   x <= np.ones(x.shape)]
+    prob = cp.Problem(cp.Minimize(cost), constraints)
+    prob.solve(verbose=use_verbose)
+    return x.value
 
 def project_to_feasible(alloc, covs, loads, max_iter=np.inf):
     # The allocation probably violates the coverage and reviewer load bounds.
@@ -182,7 +182,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
     print("Solving max min: %s elapsed" % (time.time() - st), flush=True)
 
     converged = False
-    max_iter = 300
+    max_iter = 30
 
     # Init params for grad asc
 
@@ -253,7 +253,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
             print("Obj value: ", np.sum(old_alloc * worst_s))
             print("%s elapsed" % (time.time() - st), flush=True)
 
-    return global_opt_alloc
+    return project_to_feasible_exact(global_opt_alloc, covs, loads)
 
 
 def solve_max_min_project_each_step(tpms, covs, loads, error_bound):

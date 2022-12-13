@@ -78,7 +78,7 @@ def get_worst_case(alloc, tpms, error_distrib, u_mag, noise_model="ball"):
 #     prob.solve(verbose=use_verbose)
 #     return x.value
 
-def project_to_feasible(alloc, covs, loads, use_verbose=False):
+def project_to_feasible(alloc, covs, loads, max_iter=np.inf):
     # The allocation probably violates the coverage and reviewer load bounds.
     # Find the allocation with the smallest L2 distance from the current one such
     # that the constraints are satisfied
@@ -96,8 +96,10 @@ def project_to_feasible(alloc, covs, loads, use_verbose=False):
     u = alloc.copy()
 
     converged = False
+    t = 0
 
-    while not converged:
+    while not converged and t < max_iter:
+        t += 1
         # Project to each constraint
         # LB
         new_u = (u + z_lb).copy()
@@ -227,7 +229,7 @@ def solve_max_min(tpms, covs, loads, error_distrib, u_mag, noise_model="ball"):
 
         # Project to the set of feasible allocations
         print("Projecting to feasible set: %s elapsed" % (time.time() - st), flush=True)
-        alloc = project_to_feasible(alloc, covs, loads)
+        alloc = project_to_feasible(alloc, covs, loads, max_iter=10000)
 
         # alloc = bvn(alloc)
 

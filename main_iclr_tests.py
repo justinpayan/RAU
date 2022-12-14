@@ -27,7 +27,7 @@ if __name__ == "__main__":
     noise_model = "ellipse"
 
     fname = "stat_dict_iclr_%d_%d.pkl" % (year, seed)
-    if not os.path.isfile(fname):
+    if not os.path.isfile(os.path.join(data_dir, "outputs", fname)):
         # Load in the ellipse
         std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
         means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))

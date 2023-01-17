@@ -27,6 +27,7 @@ for year in range(2018, 2023):
         postfix = "_iclr_%d_%d.npy" % (year, seed)
         mu_fname = "means" + postfix
         mu = np.load(os.path.join(output_dir, mu_fname))
+        m, n = mu.shape
 
         std_devs_fname = "std_devs" + postfix
         std_devs = np.load(os.path.join(output_dir, std_devs_fname))
@@ -39,7 +40,7 @@ for year in range(2018, 2023):
 
         usw_robust = 0
         usw_tpms = 0
-        num_samps = 100
+        num_samps = 10
         for i in range(num_samps):
             print(i)
             # Sample from the multivariate normal defined by the means and stds
@@ -52,13 +53,13 @@ for year in range(2018, 2023):
 
     table_str += "$%d$ & $%.2f \\pm %.2f$ & $%.2f \\pm %.2f$ & " \
                  "$%.2f \\pm %.2f$ & $%.2f \\pm %.2f$ \\\\\n" % (year,
-                                                                 np.mean(tpms_worst_cases),
-                                                                 np.std(tpms_worst_cases),
-                                                                 np.mean(robust_worst_cases),
-                                                                 np.std(robust_worst_cases),
-                                                                 np.mean(tpms_avg_cases),
-                                                                 np.std(tpms_avg_cases),
-                                                                 np.mean(robust_avg_cases),
-                                                                 np.std(robust_avg_cases))
+                                                                 np.mean(tpms_worst_cases)/n,
+                                                                 np.std(tpms_worst_cases)/n,
+                                                                 np.mean(robust_worst_cases)/n,
+                                                                 np.std(robust_worst_cases)/n,
+                                                                 np.mean(tpms_avg_cases)/n,
+                                                                 np.std(tpms_avg_cases)/n,
+                                                                 np.mean(robust_avg_cases)/n,
+                                                                 np.std(robust_avg_cases)/n)
 
 print(table_str)

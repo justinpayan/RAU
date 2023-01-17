@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import pickle
-import scipy.sparse
 
 output_dir = "/mnt/nfs/scratch1/jpayan/MinimalBidding/outputs"
 
@@ -42,7 +41,7 @@ for year in range(2018, 2023):
         for i in range(num_samps):
             print(i)
             # Sample from the multivariate normal defined by the means and stds
-            draw = rng.multivariate_normal(mu.ravel(), scipy.sparse.diags(std_devs.ravel()).toarray()).reshape(mu.shape)
+            draw = rng.normal(loc=mu, scale=std_devs)
             draw = np.clip(draw, 0, 1)
             usw_robust += np.sum(robust_alloc * draw)/num_samps
             usw_tpms += np.sum(tpms_alloc * draw)/num_samps

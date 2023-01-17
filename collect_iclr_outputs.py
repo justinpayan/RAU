@@ -9,12 +9,14 @@ table_str = "Year & Non-Robust & Robust \\\\\n"
 rng = np.random.default_rng(seed=31415)
 
 for year in range(2018, 2023):
+    print("Year ", year)
     tpms_worst_cases = []
     robust_worst_cases = []
     tpms_avg_cases = []
     robust_avg_cases = []
 
     for seed in range(10):
+        print("Seed ", seed)
         fname = "stat_dict_iclr_%d_%d.pkl" % (year, seed)
         with open(os.path.join(output_dir, fname), 'rb') as f:
             x = pickle.load(f)

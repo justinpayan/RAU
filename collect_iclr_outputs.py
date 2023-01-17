@@ -51,8 +51,8 @@ for year in range(2018, 2023):
         robust_avg_cases.append(usw_robust)
         tpms_avg_cases.append(usw_tpms)
 
-    table_str += "$%d$ & $%.2f \\pm %.2f$ & $%.2f \\pm %.2f$ & " \
-                 "$%.2f \\pm %.2f$ & $%.2f \\pm %.2f$ \\\\\n" % (year,
+    table_str += "$%d$ & $%.3f \\pm %.3f$ & $%.3f \\pm %.3f$ & " \
+                 "$%.3f \\pm %.3f$ & $%.3f \\pm %.3f$ \\\\\n" % (year,
                                                                  np.mean(tpms_worst_cases)/n,
                                                                  np.std(tpms_worst_cases)/n,
                                                                  np.mean(robust_worst_cases)/n,

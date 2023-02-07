@@ -179,7 +179,7 @@ def project_to_integer(alloc, covs, loads, use_verbose=False):
 # that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
 # out the maximin assignment where we worst-case over the true scores within "error_bound" of
 # the tpms scores.
-def solve_max_min(tpms, covs, loads, std_devs, noise_model="ball"):
+def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noise_model="ball"):
     assert noise_model in ["ball", "ellipse"]
 
     st = time.time()
@@ -209,22 +209,43 @@ def solve_max_min(tpms, covs, loads, std_devs, noise_model="ball"):
     lr = 1
     steps_no_imp = 0
 
+    adv_times = []
+    proj_times = []
+
+    u = cp.Variable(tpms.shape[0] * tpms.shape[1])
+    soc_constraint = [
+        cp.SOC(np.sqrt(chi2.ppf(.95, alloc.size)), cp.multiply(u - tpms.ravel(), 1 / std_devs.ravel()))]
+    alloc_param = cp.Parameter(alloc.shape[0] * alloc.shape[1])
+    adv_prob = cp.Problem(cp.Minimize(alloc_param.T @ u),
+                          soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
+
+    x = cp.Variable(tpms.shape[0]*tpms.shape[1])
+    m, n = tpms.shape
+    cost = cp.sum_squares(x - alloc_param)
+    n_vec = np.ones((n, 1))
+    m_vec = np.ones((m, 1))
+    constraints = [x @ n_vec <= loads.reshape((m, 1)),
+                   x.T @ m_vec == covs.reshape((n, 1)),
+                   x >= np.zeros(x.shape),
+                   x <= np.ones(x.shape)]
+    proj_prob = cp.Problem(cp.Minimize(cost), constraints)
+
     while not converged and t < max_iter:
         # Compute the worst-case S matrix using second order cone programming
         print("Computing worst case S matrix")
         print("%s elapsed" % (time.time() - st), flush=True)
 
         # worst case depends on noise model.
-        worst_s = get_worst_case(alloc, tpms, std_devs, noise_model=noise_model)
+        # worst_s = get_worst_case(alloc, tpms, std_devs, noise_model=noise_model)
 
-        # if noise_model == "ball":
-        #     diff = np.sqrt(np.sum((worst_s - tpms) ** 2))
-            # assert diff - 1e-2 <= u_mag
-        # elif noise_model == "ellipse":
-        #     diff = np.abs(worst_s - tpms)
-        #     empirical_u = (1 / (error_distrib + 1e-9)) * diff
-        #     empirical_u_mag = np.sqrt(np.sum(empirical_u ** 2))
-            # assert np.all(empirical_u_mag - 1e-2 < u_mag)
+        st = time.time()
+        if caching:
+            alloc_param.value = alloc.ravel()
+            adv_prob.solve(solver='SCS')
+            worst_s = u.value.reshape(tpms.shape)
+        else:
+            worst_s = get_worst_case(alloc, tpms, std_devs, noise_model=noise_model)
+        adv_times.append(time.time() - st)
 
         # Update the allocation
         # 1, compute the gradient (I think it's just the value of the worst s, but check to be sure).
@@ -242,9 +263,17 @@ def solve_max_min(tpms, covs, loads, std_devs, noise_model="ball"):
 
         # Project to the set of feasible allocations
         print("Projecting to feasible set: %s elapsed" % (time.time() - st), flush=True)
-        alloc = project_to_feasible(alloc, covs, loads, max_iter=1500)
-
-        # alloc = bvn(alloc)
+        st = time.time()
+        if dykstra:
+            alloc = project_to_feasible(alloc, covs, loads, max_iter=1500)
+        else:
+            if caching:
+                alloc_param.value = alloc.ravel()
+                proj_prob.solve()
+                alloc = x.value.reshape(tpms.shape)
+            else:
+                alloc = project_to_feasible_exact(alloc, covs, loads)
+        proj_times.append(time.time() - st)
 
         # Check for convergence, update t
         # update_amt = np.linalg.norm(alloc - old_alloc)
@@ -266,7 +295,16 @@ def solve_max_min(tpms, covs, loads, std_devs, noise_model="ball"):
             print("Obj value: ", np.sum(old_alloc * worst_s))
             print("%s elapsed" % (time.time() - st), flush=True)
 
-    return project_to_feasible_exact(global_opt_alloc, covs, loads)
+    st = time.time()
+    if caching:
+        alloc_param.value = global_opt_alloc.ravel()
+        proj_prob.solve()
+        final_alloc = x.value.reshape(tpms.shape)
+    else:
+        final_alloc = project_to_feasible_exact(global_opt_alloc, covs, loads)
+    proj_times.append(time.time() - st)
+
+    return final_alloc, adv_times, proj_times
 
 
 def solve_max_min_project_each_step(tpms, covs, loads, error_bound):

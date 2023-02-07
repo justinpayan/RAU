@@ -241,7 +241,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         st = time.time()
         if caching:
             alloc_param.value = alloc.ravel()
-            adv_prob.solve(solver='SCS')
+            adv_prob.solve(solver='SCS', warm_start=True)
             worst_s = u.value.reshape(tpms.shape)
         else:
             worst_s = get_worst_case(alloc, tpms, std_devs, noise_model=noise_model)
@@ -269,7 +269,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         else:
             if caching:
                 alloc_param.value = alloc.ravel()
-                proj_prob.solve()
+                proj_prob.solve(warm_start=True)
                 alloc = x.value.reshape(tpms.shape)
             else:
                 alloc = project_to_feasible_exact(alloc, covs, loads)
@@ -298,7 +298,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
     st = time.time()
     if caching:
         alloc_param.value = global_opt_alloc.ravel()
-        proj_prob.solve()
+        proj_prob.solve(warm_start=True)
         final_alloc = x.value.reshape(tpms.shape)
     else:
         final_alloc = project_to_feasible_exact(global_opt_alloc, covs, loads)

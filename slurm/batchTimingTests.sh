@@ -6,7 +6,7 @@ LOG_DIR=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding
 SEED=0
 YEAR=2020
 PARTITION=longq
-NODELIST="swarm074"
+NODELIST="--nodelist=swarm074"
 TIME="--time=02-11:59:00"
 
 sbatch $NODELIST $TIME --partition=$PARTITION \

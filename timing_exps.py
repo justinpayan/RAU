@@ -14,8 +14,12 @@ def parse_args():
     parser.add_argument("--data_dir", type=str, default=".")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--year", type=int)
-    parser.add_argument("--caching", type=bool, action=argparse.BooleanOptionalAction)
-    parser.add_argument("--dykstra", type=bool, action=argparse.BooleanOptionalAction)
+    parser.add_argument('--caching', action='store_true')
+    parser.add_argument('--no-caching', dest='caching', action='store_false')
+    parser.set_defaults(caching=True)
+    parser.add_argument('--dykstra', action='store_true')
+    parser.add_argument('--no-dykstra', dest='dykstra', action='store_false')
+    parser.set_defaults(dykstra=True)
 
     return parser.parse_args()
 

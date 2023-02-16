@@ -249,7 +249,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         if caching:
             # alloc_param.value = alloc.ravel()
             alloc_param.value = alloc
-            adv_prob.solve(solver='SCS', warm_start=True)
+            adv_prob.solve(warm_start=True)
             worst_s = u.value
             # worst_s = u.value.reshape(tpms.shape)
         else:

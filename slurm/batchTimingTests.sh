@@ -8,7 +8,7 @@ YEAR=2019
 PARTITION=longq
 NODELIST="--nodelist=swarm089"
 TIME="--time=02-11:59:00"
-MEM="40G"
+MEM="60G"
 
 sbatch $NODELIST $TIME --partition=$PARTITION \
 --nodes=1 --ntasks=1 --mem=$MEM --output=$LOG_DIR/iclr_tests_${YEAR}_${SEED}_true_true.out \

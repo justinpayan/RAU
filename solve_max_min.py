@@ -214,11 +214,11 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
 
     u = cp.Variable(tpms.shape)
     soc_constraint = [
-        cp.SOC(np.sqrt(chi2.ppf(.95, alloc.size)), cp.reshape((u - tpms) * (1 / std_devs), (1, tpms.shape[0]*tpms.shape[1])))]
+        cp.SOC(np.sqrt(chi2.ppf(.95, alloc.size)), cp.reshape(cp.multiply(u - tpms, 1 / std_devs), (1, tpms.shape[0]*tpms.shape[1])))]
     alloc_param = cp.Parameter(alloc.shape)
     # adv_prob = cp.Problem(cp.Minimize(alloc_param.T @ u),
     #                       soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
-    adv_prob = cp.Problem(cp.Minimize(cp.sum(alloc_param.T * u)),
+    adv_prob = cp.Problem(cp.Minimize(cp.sum(cp.multiply(alloc_param, u))),
                           soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
     print("adv_prob is DPP? ", adv_prob.is_dcp(dpp=True))
     print("adv_prob is DCP? ", adv_prob.is_dcp(dpp=False))

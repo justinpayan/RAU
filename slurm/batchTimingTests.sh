@@ -5,9 +5,9 @@ LOG_DIR=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding
 
 SEED=0
 YEAR=2019
-PARTITION=defq
-NODELIST="--nodelist=swarm074"
-TIME="--time=00-11:59:00"
+PARTITION=longq
+NODELIST="--nodelist=swarm089"
+TIME="--time=02-11:59:00"
 
 sbatch $NODELIST $TIME --partition=$PARTITION \
 --nodes=1 --ntasks=1 --mem=10G --output=$LOG_DIR/iclr_tests_${YEAR}_${SEED}_true_true.out \

@@ -212,14 +212,18 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
     adv_times = []
     proj_times = []
 
-    u = cp.Variable(tpms.shape[0] * tpms.shape[1])
+    u = cp.Variable(tpms.shape)
     soc_constraint = [
-        cp.SOC(np.sqrt(chi2.ppf(.95, alloc.size)), cp.multiply(u - tpms.ravel(), 1 / std_devs.ravel()))]
-    alloc_param = cp.Parameter(alloc.shape[0] * alloc.shape[1])
-    adv_prob = cp.Problem(cp.Minimize(alloc_param.T @ u),
+        cp.SOC(np.sqrt(chi2.ppf(.95, alloc.size)), cp.multiply(u - tpms, 1 / std_devs))]
+    alloc_param = cp.Parameter(alloc.shape)
+    # adv_prob = cp.Problem(cp.Minimize(alloc_param.T @ u),
+    #                       soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
+    adv_prob = cp.Problem(cp.Minimize(cp.sum(alloc_param.T * u)),
                           soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
+    print("adv_prob is DPP? ", adv_prob.is_dcp(dpp=True))
+    print("adv_prob is DCP? ", adv_prob.is_dcp(dpp=False))
 
-    x = cp.Variable(tpms.shape[0]*tpms.shape[1])
+    x = cp.Variable(tpms.shape)
     m, n = tpms.shape
     cost = cp.sum_squares(x - alloc_param)
     n_vec = np.ones((n, 1))
@@ -229,6 +233,9 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
                    x >= np.zeros(x.shape),
                    x <= np.ones(x.shape)]
     proj_prob = cp.Problem(cp.Minimize(cost), constraints)
+
+    print("proj_prob is DPP? ", proj_prob.is_dcp(dpp=True))
+    print("proj_prob is DCP? ", proj_prob.is_dcp(dpp=False))
 
     while not converged and t < max_iter:
         # Compute the worst-case S matrix using second order cone programming
@@ -240,9 +247,11 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
 
         st = time.time()
         if caching:
-            alloc_param.value = alloc.ravel()
+            # alloc_param.value = alloc.ravel()
+            alloc_param.value = alloc
             adv_prob.solve(solver='SCS', warm_start=True)
-            worst_s = u.value.reshape(tpms.shape)
+            worst_s = u.value
+            # worst_s = u.value.reshape(tpms.shape)
         else:
             worst_s = get_worst_case(alloc, tpms, std_devs, noise_model=noise_model)
         adv_times.append(time.time() - st)
@@ -268,9 +277,11 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
             alloc = project_to_feasible(alloc, covs, loads, max_iter=1500)
         else:
             if caching:
-                alloc_param.value = alloc.ravel()
+                # alloc_param.value = alloc.ravel()
+                alloc_param.value = alloc
                 proj_prob.solve(warm_start=True)
-                alloc = x.value.reshape(tpms.shape)
+                # alloc = x.value.reshape(tpms.shape)
+                alloc = x.value
             else:
                 alloc = project_to_feasible_exact(alloc, covs, loads)
         proj_times.append(time.time() - st)
@@ -297,9 +308,11 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
 
     st = time.time()
     if caching:
-        alloc_param.value = global_opt_alloc.ravel()
+        # alloc_param.value = global_opt_alloc.ravel()
+        alloc_param.value = global_opt_alloc
         proj_prob.solve(warm_start=True)
-        final_alloc = x.value.reshape(tpms.shape)
+        # final_alloc = x.value.reshape(tpms.shape)
+        final_alloc = x.value
     else:
         final_alloc = project_to_feasible_exact(global_opt_alloc, covs, loads)
     proj_times.append(time.time() - st)

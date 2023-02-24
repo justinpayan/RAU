@@ -184,9 +184,9 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
 
     st = time.time()
     print("Solving for initial max USW alloc", flush=True)
-    # _, alloc = solve_usw_gurobi(tpms, covs, loads)
-    alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
-    alloc = np.clip(alloc, 0, 1)
+    _, alloc = solve_usw_gurobi(tpms, covs, loads)
+    # alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
+    # alloc = np.clip(alloc, 0, 1)
     # alloc = project_to_feasible(alloc, covs, loads)
 
     global_opt_obj = 0.0

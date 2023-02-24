@@ -2,7 +2,7 @@ import numpy as np
 
 # from docplex.mp.model import Model
 from gurobipy import *
-
+import gurobipy as gp
 
 def solve_usw(affinity_scores, covs, loads):
     opt_mod = Model(name="Max USW")
@@ -74,6 +74,12 @@ def convert_to_mat(m, num_papers, num_revs):
 
 
 def solve_usw_gurobi(affinity_scores, covs, loads):
+    env = gp.Env(empty=True)
+    env.setParam('WLSACCESSID', 'a874a18f-8070-4ce8-b5c3-206c3625d8a6')
+    env.setParam('WLSSECRET', 'e685b441-d07f-43f4-aaeb-5e6385a6bc07')
+    env.setParam('LICENSEID', '937238')
+    env.start()
+
     paper_rev_pairs, pras = create_multidict(affinity_scores)
 
     m = Model("TPMS")

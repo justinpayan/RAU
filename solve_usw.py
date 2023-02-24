@@ -90,6 +90,7 @@ def solve_usw_gurobi(affinity_scores, covs, loads):
     m.setObjective(x.prod(pras), GRB.MAXIMIZE)
 
     # m.write("TPMS.lp")
+    m.setParam('Threads', 1)
 
     m.optimize()
 

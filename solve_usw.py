@@ -74,13 +74,6 @@ def convert_to_mat(m, num_papers, num_revs):
 
 
 def solve_usw_gurobi(affinity_scores, covs, loads):
-    env = gp.Env(empty=True)
-    env.setParam('WLSAccessID', 'a874a18f-8070-4ce8-b5c3-206c3625d8a6')
-    env.setParam('WLSSecret', 'e685b441-d07f-43f4-aaeb-5e6385a6bc07')
-    env.setParam('LicenseID', 937238)
-    env.setParam('Threads', 1)
-    env.start()
-
     paper_rev_pairs, pras = create_multidict(affinity_scores)
 
     m = Model("TPMS")

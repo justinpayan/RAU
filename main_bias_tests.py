@@ -50,8 +50,8 @@ if __name__ == "__main__":
 
         m, n = means.shape
 
-        covs = np.ones(math.floor(.9*n)) * 3
-        loads = np.ones(math.floor(.9*m)) * 6
+        covs = np.ones(math.floor(n)) * 3
+        loads = np.ones(math.floor(m)) * 6
 
         # Save the data used for this run
         np.save(os.path.join(data_dir, "outputs", "std_devs_dummy_revs_%d_%d.npy" % (num_dummy_revs, seed)), std_devs)

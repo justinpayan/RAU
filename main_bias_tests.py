@@ -36,7 +36,7 @@ if __name__ == "__main__":
         # means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
         orig_means = np.load(os.path.join(data_dir, "data", conf, "scores.npy"))
         # Sample a set of small std deviations for these reviewer-paper pairs. We will assume there is almost no noise.
-        std_devs = np.zeros(orig_means.shape)
+        std_devs = np.ones(orig_means.shape)*0.0001
 
         # Add on the dummy reviewers
         m, n = orig_means.shape

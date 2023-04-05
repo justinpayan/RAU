@@ -15,6 +15,7 @@ def parse_args():
     parser.add_argument("--data_dir", type=str, default=".")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--num_dummy_revs", type=int)
+    parser.add_argument("--conf", type=str, default="midl")
 
     return parser.parse_args()
 
@@ -24,15 +25,16 @@ if __name__ == "__main__":
     data_dir = args.data_dir
     num_dummy_revs = args.num_dummy_revs*10
     seed = args.seed
+    conf = args.conf
 
     noise_model = "ellipse"
 
-    fname = "stat_dict_dummy_revs_%d_%d.pkl" % (num_dummy_revs, seed)
+    fname = "stat_dict_dummy_revs_%s_%d_%d.pkl" % (conf, num_dummy_revs, seed)
     if not os.path.isfile(os.path.join(data_dir, "outputs", fname)):
         # Load in the ellipse
         # std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
         # means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
-        orig_means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_2018.npy"))
+        orig_means = np.load(os.path.join(data_dir, "data", conf, "scores.npy"))
         # Sample a set of small std deviations for these reviewer-paper pairs. We will assume there is almost no noise.
         std_devs = np.zeros(orig_means.shape)
 
@@ -51,27 +53,27 @@ if __name__ == "__main__":
         m, n = means.shape
 
         covs = np.ones(math.floor(n)) * 3
-        loads = np.ones(math.floor(m)) * 6
+        loads = np.ones(math.floor(m)) * 4
 
         # Save the data used for this run
-        np.save(os.path.join(data_dir, "outputs", "std_devs_dummy_revs_%d_%d.npy" % (num_dummy_revs, seed)), std_devs)
-        np.save(os.path.join(data_dir, "outputs", "means_dummy_revs_%d_%d.npy" % (num_dummy_revs, seed)), means)
+        np.save(os.path.join(data_dir, "outputs", "std_devs_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), std_devs)
+        np.save(os.path.join(data_dir, "outputs", "means_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), means)
 
         # Run the max-min model
         # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
         fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs,
                                                  noise_model=noise_model, dykstra=True, caching=False)
 
-        np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_dummy_revs_%d_%d.npy" % (num_dummy_revs, seed)), fractional_alloc_max_min)
+        np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), fractional_alloc_max_min)
         # alloc_max_min = best_of_n_bvn(fractional_alloc_max_min, tpms, error_bound, n=10)
         alloc_max_min = bvn(fractional_alloc_max_min)
-        np.save(os.path.join(data_dir, "outputs", "max_min_alloc_dummy_revs_%d_%d.npy" % (num_dummy_revs, seed)), alloc_max_min)
+        np.save(os.path.join(data_dir, "outputs", "max_min_alloc_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), alloc_max_min)
 
         # Run the baseline, which is just TPMS
         print("Solving for max USW using TPMS scores", flush=True)
         objective_score, alloc = solve_usw_gurobi(means, covs, loads)
 
-        np.save(os.path.join(data_dir, "outputs", "tpms_alloc_dummy_revs_%d_%d.npy" % (num_dummy_revs, seed)), alloc)
+        np.save(os.path.join(data_dir, "outputs", "tpms_alloc_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), alloc)
 
         true_obj = np.sum(alloc * true_scores)
 
@@ -97,7 +99,7 @@ if __name__ == "__main__":
 
         stat_dict = {}
         print("\n*******************\n*******************\n*******************\n")
-        print("Stats for Dummy Revs on ICLR 2018. Num dummies is %d, seed is %d" % (num_dummy_revs, seed))
+        print("Stats for Dummy Revs on %s. Num dummies is %d, seed is %d" % (conf, num_dummy_revs, seed))
         print("Optimal USW: %.2f" % opt)
         stat_dict['opt_usw'] = opt
         print("\n")

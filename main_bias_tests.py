@@ -34,7 +34,7 @@ if __name__ == "__main__":
         # Load in the ellipse
         # std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
         # means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
-        orig_means = np.load(os.path.join(data_dir, "data", conf, "scores.npy"))
+        orig_means = np.clip(np.load(os.path.join(data_dir, "data", conf, "scores.npy")), 0, 1)
         # Sample a set of small std deviations for these reviewer-paper pairs. We will assume there is almost no noise.
         std_devs = np.ones(orig_means.shape)*0.01
 

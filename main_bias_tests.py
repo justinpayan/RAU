@@ -32,7 +32,7 @@ if __name__ == "__main__":
         # Load in the ellipse
         # std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
         # means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
-        orig_means = np.load(os.path.join(data_dir, "data", "cvpr", "scores.npy"))
+        orig_means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_2018.npy"))
         # Sample a set of small std deviations for these reviewer-paper pairs. We will assume there is almost no noise.
         std_devs = np.zeros(orig_means.shape)
 
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         gen = np.random.default_rng(seed=seed)
         true_mean_dummies = .1
         std_dev_of_dummies = .3
-        new_revs = gen.normal(loc=true_mean_dummies, scale=std_dev_of_dummies, size=(num_dummy_revs, n))
+        new_revs = np.clip(gen.normal(loc=true_mean_dummies, scale=std_dev_of_dummies, size=(num_dummy_revs, n)), 0, 1)
         means = np.vstack((orig_means, new_revs))
         std_devs = np.vstack((std_devs, np.ones(new_revs.shape)*std_dev_of_dummies))
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
         stat_dict = {}
         print("\n*******************\n*******************\n*******************\n")
-        print("Stats for Dummy Revs on CVPR. Num dummies is %d, seed is %d" % (num_dummy_revs, seed))
+        print("Stats for Dummy Revs on ICLR 2018. Num dummies is %d, seed is %d" % (num_dummy_revs, seed))
         print("Optimal USW: %.2f" % opt)
         stat_dict['opt_usw'] = opt
         print("\n")

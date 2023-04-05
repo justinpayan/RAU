@@ -59,7 +59,10 @@ def get_worst_case(alloc, tpms, std_devs, noise_model="ball"):
         prob = cp.Problem(cp.Minimize(alloc.ravel().T @ u),
                           soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
         # prob.solve(solver='SCS')
+        print(np.sqrt(chi2.ppf(.95, alloc.size)))
+        print(np.sum(((tpms.ravel()-tpms.ravel()) * (1/std_devs.ravel()))**2))
         prob.solve()
+        print()
         print(u.value)
 
         return u.value.reshape(tpms.shape)

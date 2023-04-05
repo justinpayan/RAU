@@ -3,7 +3,7 @@
 DATA_DIR=/mnt/nfs/scratch1/jpayan/MinimalBidding
 LOG_DIR=/mnt/nfs/scratch1/jpayan/logs/MinimalBidding
 
-CONF="MIDL"
+CONF="midl"
 
 for SEED in {0..9}; do
   for NUM_DUMMIES_BY_TEN in {0..100..10}; do

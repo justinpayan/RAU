@@ -117,6 +117,7 @@ def bvn(fractional_alloc):
     rounded_alloc = np.zeros(fractional_alloc.shape)
     with open("output_bvn.txt", 'r') as f:
         lines = f.readlines()
+        print(lines)
         for line in lines:
             r, p = line.strip().split()
             r = int(r)

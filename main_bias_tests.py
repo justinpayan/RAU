@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
         # Run the max-min model
         # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
-        fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs,
+        fractional_alloc_max_min, _, _ = solve_max_min(means, covs, loads, std_devs,
                                                  noise_model=noise_model, dykstra=True, caching=False)
 
         np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), fractional_alloc_max_min)

@@ -29,14 +29,15 @@ if __name__ == "__main__":
     for num_dummies in range(0, 101, 5):
         for seed in range(10):
             fname = "outputs/stat_dict_dummy_revs_midl_%d_%d.pkl" % (num_dummies, seed)
-            with open(fname, 'rb') as f:
-                x = pickle.load(f)
-                opt_usw = x['opt_usw']
-                all_data.append([num_dummies,
-                                 seed,
-                                 100*x['true_usw_tpms']/opt_usw,
-                                 100*x['true_usw_maxmin']/opt_usw]
-                                )
+            if os.path.isfile(fname):
+                with open(fname, 'rb') as f:
+                    x = pickle.load(f)
+                    opt_usw = x['opt_usw']
+                    all_data.append([num_dummies,
+                                     seed,
+                                     100*x['true_usw_tpms']/opt_usw,
+                                     100*x['true_usw_maxmin']/opt_usw]
+                                    )
     df = pd.DataFrame(all_data)
     df.columns = [["num_dummies", "seed", "true_usw_tpms", "true_usw_maxmin"]]
     df.to_csv("stat_df_midl_dummy_revs.csv", index=False)

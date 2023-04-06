@@ -4,7 +4,7 @@ module load gurobi/1001
 
 DATA_DIR=$1
 SEED=$2
-NUM_DUMMIES_BY_TEN=$3
+NUM_DUMMIES=$3
 CONF=$4
 
-python ../main_bias_tests.py --data_dir $DATA_DIR --seed $SEED --num_dummy_revs $NUM_DUMMIES_BY_TEN --conf $CONF
+python ../main_bias_tests.py --data_dir $DATA_DIR --seed $SEED --num_dummy_revs $NUM_DUMMIES --conf $CONF

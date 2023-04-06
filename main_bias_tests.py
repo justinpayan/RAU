@@ -23,7 +23,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     data_dir = args.data_dir
-    num_dummy_revs = args.num_dummy_revs*10
+    num_dummy_revs = args.num_dummy_revs
     seed = args.seed
     conf = args.conf
 

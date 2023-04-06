@@ -322,7 +322,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         final_alloc = project_to_feasible_exact(global_opt_alloc, covs, loads)
     proj_times.append(time.time() - st)
 
-    return final_alloc, adv_times, proj_times
+    return final_alloc
 
 
 def solve_max_min_project_each_step(tpms, covs, loads, error_bound):

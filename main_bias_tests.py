@@ -43,7 +43,7 @@ if __name__ == "__main__":
         noisy_means = orig_means + gen.normal(loc=0, scale=std_dev_of_real, size=(m, n))
 
         # Add on the dummy reviewers
-        true_mean_dummies = .15
+        true_mean_dummies = .1
         std_dev_of_dummies = .15
         new_revs = gen.normal(loc=true_mean_dummies, scale=std_dev_of_dummies, size=(num_dummy_revs, n))
         means = np.vstack((noisy_means, new_revs))

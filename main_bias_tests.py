@@ -38,7 +38,7 @@ if __name__ == "__main__":
         orig_means = np.clip(np.load(os.path.join(data_dir, "data", conf, "scores.npy")), 0, 1)
         m, n = orig_means.shape
         # Sample a set of small std deviations for these reviewer-paper pairs. We will assume there is almost no noise.
-        std_dev_of_real = .01
+        std_dev_of_real = .02
         std_devs = np.ones(orig_means.shape)*std_dev_of_real
         noisy_means = orig_means + gen.normal(loc=0, scale=std_dev_of_real, size=(m, n))
 

@@ -35,9 +35,14 @@ if __name__ == "__main__":
                     opt_usw = x['opt_usw']
                     all_data.append([num_dummies,
                                      seed,
-                                     100*x['true_usw_tpms']/opt_usw,
-                                     100*x['true_usw_maxmin']/opt_usw]
+                                     'Naive LP',
+                                     100*x['true_usw_tpms']/opt_usw]
+                                    )
+                    all_data.append([num_dummies,
+                                     seed,
+                                     'RRA',
+                                     100 * x['true_usw_maxmin'] / opt_usw]
                                     )
     df = pd.DataFrame(all_data)
-    df.columns = [["num_dummies", "seed", "true_usw_tpms", "true_usw_maxmin"]]
+    df.columns = [["num_dummies", "seed", "Solver", "true_value"]]
     df.to_csv("stat_df_midl_dummy_revs.csv", index=False)

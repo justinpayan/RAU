@@ -27,7 +27,7 @@ import os
 if __name__ == "__main__":
     all_data = []
     for num_dummies in range(0, 101, 5):
-        for seed in range(10):
+        for seed in range(100):
             fname = "outputs/stat_dict_dummy_revs_midl_%d_%d.pkl" % (num_dummies, seed)
             if os.path.isfile(fname):
                 with open(fname, 'rb') as f:

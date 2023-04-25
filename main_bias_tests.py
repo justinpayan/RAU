@@ -31,21 +31,22 @@ if __name__ == "__main__":
 
     fname = "stat_dict_dummy_revs_%s_%d_%d.pkl" % (conf, num_dummy_revs, seed)
     if not os.path.isfile(os.path.join(data_dir, "outputs", fname)):
+        gen = np.random.default_rng(seed=seed)
         # Load in the ellipse
         # std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
         # means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
         orig_means = np.clip(np.load(os.path.join(data_dir, "data", conf, "scores.npy")), 0, 1)
+        m, n = orig_means.shape
         # Sample a set of small std deviations for these reviewer-paper pairs. We will assume there is almost no noise.
-        std_devs = np.ones(orig_means.shape)*0.01
+        std_dev_of_real = .01
+        std_devs = np.ones(orig_means.shape)*std_dev_of_real
+        noisy_means = orig_means + gen.normal(loc=0, scale=std_dev_of_real, size=(m, n))
 
         # Add on the dummy reviewers
-        m, n = orig_means.shape
-
-        gen = np.random.default_rng(seed=seed)
         true_mean_dummies = .1
-        std_dev_of_dummies = .3
-        new_revs = np.clip(gen.normal(loc=true_mean_dummies, scale=std_dev_of_dummies, size=(num_dummy_revs, n)), 0, 1)
-        means = np.vstack((orig_means, new_revs))
+        std_dev_of_dummies = .1
+        new_revs = gen.normal(loc=true_mean_dummies, scale=std_dev_of_dummies, size=(num_dummy_revs, n))
+        means = np.vstack((noisy_means, new_revs))
         std_devs = np.vstack((std_devs, np.ones(new_revs.shape)*std_dev_of_dummies))
 
         true_scores = np.vstack((orig_means, np.ones(new_revs.shape)*true_mean_dummies))
@@ -84,6 +85,9 @@ if __name__ == "__main__":
 
         np.save("opt_alloc_dummy_revs_%d_%d.npy" % (num_dummy_revs, seed), opt_alloc)
 
+        # Check if any dummy revs were used
+        dummies_used_in_opt = np.any(np.where(opt_alloc)[0] >= m - num_dummy_revs)
+
         print(loads)
         print(np.sum(alloc_max_min, axis=1))
         print(covs)
@@ -102,6 +106,8 @@ if __name__ == "__main__":
         print("Stats for Dummy Revs on %s. Num dummies is %d, seed is %d" % (conf, num_dummy_revs, seed))
         print("Optimal USW: %.2f" % opt)
         stat_dict['opt_usw'] = opt
+        print("Dummies used in opt? ", dummies_used_in_opt)
+        stat_dict['dummies_used_in_opt'] = dummies_used_in_opt
         print("\n")
         print("Estimated USW from using TPMS scores: %.2f" % objective_score)
         stat_dict['est_usw_tpms'] = objective_score

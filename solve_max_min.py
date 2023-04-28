@@ -449,7 +449,7 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, integer=True, rsquared=None, 
     assert (np.all(covs <= n_reviewers))
 
     if rsquared is None:
-        rsquared = chi2.ppf(.95, tpms.size())
+        rsquared = chi2.ppf(.95, tpms.size)
 
     num = int(n_reviewers * n_papers)
     m = gp.Model()

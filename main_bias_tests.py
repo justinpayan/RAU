@@ -74,14 +74,14 @@ if __name__ == "__main__":
         std_devs = np.ones(orig_means.shape) * std_dev_of_real
         loc = np.zeros(orig_means.shape)
 
-        for p in dummy_paps:
-            std_devs[mid_revs[:, p], [p]*10] = 0
-            loc[mid_revs[:, p], [p]*10] = 2*std_dev_of_dummies
+        for p_idx, p in enumerate(dummy_paps):
+            std_devs[mid_revs[:, p_idx], [p]*10] = 0
+            loc[mid_revs[:, p_idx], [p]*10] = 2*std_dev_of_dummies
 
         means = orig_means + gen.normal(loc=loc, scale=std_devs)
 
-        for p in dummy_paps:
-            std_devs[mid_revs[:, p], [p]*10] = std_dev_of_dummies
+        for p_idx, p in enumerate(dummy_paps):
+            std_devs[mid_revs[:, p_idx], [p]*10] = std_dev_of_dummies
 
         true_scores = orig_means.copy()
 

@@ -65,9 +65,13 @@ if __name__ == "__main__":
         std_dev_of_real = .02
         std_dev_of_dummies = .15
         dummy_paps = np.random.choice(n, num_dummies, replace=False)
+        dummy_revs = np.random.choice(m, num_dummies, replace=False)
         std_devs = np.ones(orig_means.shape) * std_dev_of_real
-        std_devs[:, dummy_paps] = std_dev_of_dummies
-        means = orig_means + gen.normal(loc=0, scale=std_devs)
+        std_devs[dummy_revs, dummy_paps] = std_dev_of_dummies
+
+        loc = np.zeros(orig_means.shape)
+        loc[dummy_revs, dummy_paps] = .1
+        means = orig_means + gen.normal(loc=loc, scale=std_devs)
         true_scores = orig_means.copy()
 
     m, n = means.shape

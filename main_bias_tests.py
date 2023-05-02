@@ -118,6 +118,11 @@ if __name__ == "__main__":
         print("Solving for max USW using true bids")
         opt, opt_alloc = solve_usw_gurobi(true_scores, covs, loads)
 
+        if revs_or_paps == "paps":
+            true_obj_on_dummies = np.sum(alloc[:, dummy_paps] * true_scores[:, dummy_paps])
+            true_obj_max_min_on_dummies = np.sum(alloc_max_min[:, dummy_paps] * true_scores[:, dummy_paps])
+            opt_obj_on_dummies = np.sum(opt_alloc[:, dummy_paps] * true_scores[:, dummy_paps])
+
         np.save("opt_alloc_dummy_%s_%d_%d.npy" % (revs_or_paps, num_dummies, seed), opt_alloc)
 
         # Check if any dummy revs were used
@@ -159,6 +164,16 @@ if __name__ == "__main__":
         # print("Worst case USW from max_min optimizer: %.2f" % worst_case_obj_max_min)
         # stat_dict['worst_usw_maxmin'] = worst_case_obj_max_min
         print("Efficiency loss for max_min (percent of opt): %.2f" % (100 * (opt - true_obj_max_min) / opt))
+
+        if revs_or_paps == "paps":
+            # Compare the welfare on only the papers that had the noise added
+            stat_dict['true_obj_dummies'] = true_obj_on_dummies
+            stat_dict['true_obj_max_min_dummies'] = true_obj_max_min_on_dummies
+            stat_dict['opt_obj_dummies'] = opt_obj_on_dummies
+
+            print('true_obj_dummies ', true_obj_on_dummies)
+            print('true_obj_max_min_on_dummies ', true_obj_max_min_on_dummies)
+            print('opt_obj_on_dummies ', opt_obj_on_dummies)
 
         with open(os.path.join(data_dir, "outputs", fname), 'wb') as f:
             pickle.dump(stat_dict, f)

@@ -14,8 +14,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, default=".")
     parser.add_argument("--seed", type=int)
-    parser.add_argument("--num_dummy_revs", type=int)
+    parser.add_argument("--num_dummies", type=int)
     parser.add_argument("--conf", type=str, default="midl")
+    parser.add_argument("--revs_or_paps", type=str, default="revs")
 
     return parser.parse_args()
 
@@ -23,14 +24,15 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     data_dir = args.data_dir
-    num_dummy_revs = args.num_dummy_revs
+    num_dummies = args.num_dummies
     seed = args.seed
     conf = args.conf
+    revs_or_paps = args.revs_or_paps
 
     noise_model = "ellipse"
 
-    fname = "stat_dict_dummy_revs_%s_%d_%d.pkl" % (conf, num_dummy_revs, seed)
-    if not os.path.isfile(os.path.join(data_dir, "outputs", fname)):
+    if revs_or_paps == "revs":
+        fname = "stat_dict_dummy_revs_%s_%d_%d.pkl" % (conf, num_dummies, seed)
         gen = np.random.default_rng(seed=seed)
         # Load in the ellipse
         # std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
@@ -45,36 +47,54 @@ if __name__ == "__main__":
         # Add on the dummy reviewers
         true_mean_dummies = .1
         std_dev_of_dummies = .15
-        new_revs = gen.normal(loc=true_mean_dummies, scale=std_dev_of_dummies, size=(num_dummy_revs, n))
+        new_revs = gen.normal(loc=true_mean_dummies, scale=std_dev_of_dummies, size=(num_dummies, n))
         means = np.vstack((noisy_means, new_revs))
         std_devs = np.vstack((std_devs, np.ones(new_revs.shape)*std_dev_of_dummies))
 
         true_scores = np.vstack((orig_means, np.ones(new_revs.shape)*true_mean_dummies))
+    elif revs_or_paps == "paps":
+        # We are just picking a subset of papers and randomly adding some noise to their estimated scores.
+        fname = "stat_dict_dummy_paps_%s_%d_%d.pkl" % (conf, num_dummies, seed)
+        gen = np.random.default_rng(seed=seed)
+        # Load in the ellipse
+        # std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
+        # means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
+        orig_means = np.clip(np.load(os.path.join(data_dir, "data", conf, "scores.npy")), 0, 1)
+        m, n = orig_means.shape
+        # Sample a set of small std deviations for these reviewer-paper pairs. We will assume there is almost no noise.
+        std_dev_of_real = .02
+        std_dev_of_dummies = .15
+        dummy_paps = np.random.choice(n, num_dummies, replace=False)
+        std_devs = np.ones(orig_means.shape) * std_dev_of_real
+        std_devs[:, dummy_paps] = std_dev_of_dummies
+        means = orig_means + gen.normal(loc=0, scale=std_devs)
+        true_scores = orig_means.copy()
 
-        m, n = means.shape
+    m, n = means.shape
 
-        covs = np.ones(math.floor(n)) * 3
-        loads = np.ones(math.floor(m)) * 4
+    covs = np.ones(math.floor(n)) * 3
+    loads = np.ones(math.floor(m)) * 4
 
+    if not os.path.isfile(os.path.join(data_dir, "outputs", fname)):
         # Save the data used for this run
-        np.save(os.path.join(data_dir, "outputs", "std_devs_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), std_devs)
-        np.save(os.path.join(data_dir, "outputs", "means_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), means)
+        np.save(os.path.join(data_dir, "outputs", "std_devs_dummy_%s_%s_%d_%d.npy" % (revs_or_paps, conf, num_dummies, seed)), std_devs)
+        np.save(os.path.join(data_dir, "outputs", "means_dummy_%s_%s_%d_%d.npy" % (revs_or_paps, conf, num_dummies, seed)), means)
 
         # Run the max-min model
         # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
         fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs,
                                                  noise_model=noise_model, dykstra=True, caching=False)
 
-        np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), fractional_alloc_max_min)
+        np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_dummy_%s_%s_%d_%d.npy" % (revs_or_paps, conf, num_dummies, seed)), fractional_alloc_max_min)
         # alloc_max_min = best_of_n_bvn(fractional_alloc_max_min, tpms, error_bound, n=10)
         alloc_max_min = bvn(fractional_alloc_max_min)
-        np.save(os.path.join(data_dir, "outputs", "max_min_alloc_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), alloc_max_min)
+        np.save(os.path.join(data_dir, "outputs", "max_min_alloc_dummy_%s_%s_%d_%d.npy" % (revs_or_paps, conf, num_dummies, seed)), alloc_max_min)
 
         # Run the baseline, which is just TPMS
         print("Solving for max USW using TPMS scores", flush=True)
         objective_score, alloc = solve_usw_gurobi(means, covs, loads)
 
-        np.save(os.path.join(data_dir, "outputs", "tpms_alloc_dummy_revs_%s_%d_%d.npy" % (conf, num_dummy_revs, seed)), alloc)
+        np.save(os.path.join(data_dir, "outputs", "tpms_alloc_dummy_%s_%s_%d_%d.npy" % (revs_or_paps, conf, num_dummies, seed)), alloc)
 
         true_obj = np.sum(alloc * true_scores)
 
@@ -83,10 +103,12 @@ if __name__ == "__main__":
         print("Solving for max USW using true bids")
         opt, opt_alloc = solve_usw_gurobi(true_scores, covs, loads)
 
-        np.save("opt_alloc_dummy_revs_%d_%d.npy" % (num_dummy_revs, seed), opt_alloc)
+        np.save("opt_alloc_dummy_%s_%d_%d.npy" % (revs_or_paps, num_dummies, seed), opt_alloc)
 
         # Check if any dummy revs were used
-        dummies_used_in_opt = np.any(np.where(opt_alloc)[0] >= m - num_dummy_revs)
+        dummies_used_in_opt = 0
+        if revs_or_paps == "revs":
+            dummies_used_in_opt = np.any(np.where(opt_alloc)[0] >= m - num_dummies)
 
         print(loads)
         print(np.sum(alloc_max_min, axis=1))
@@ -103,7 +125,7 @@ if __name__ == "__main__":
 
         stat_dict = {}
         print("\n*******************\n*******************\n*******************\n")
-        print("Stats for Dummy Revs on %s. Num dummies is %d, seed is %d" % (conf, num_dummy_revs, seed))
+        print("Stats for Dummy %s on %s. Num dummies is %d, seed is %d" % (revs_or_paps, conf, num_dummies, seed))
         print("Optimal USW: %.2f" % opt)
         stat_dict['opt_usw'] = opt
         print("Dummies used in opt? ", dummies_used_in_opt)

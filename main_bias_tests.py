@@ -62,20 +62,27 @@ if __name__ == "__main__":
         orig_means = np.clip(np.load(os.path.join(data_dir, "data", conf, "scores.npy")), 0, 1)
         m, n = orig_means.shape
         # Sample a set of small std deviations for these reviewer-paper pairs. We will assume there is almost no noise.
+
+        # Let's actually say that some of the reviewers get the artificial bump
+
         std_dev_of_real = .02
         std_dev_of_dummies = .15
         dummy_paps = np.random.choice(n, num_dummies, replace=False)
         top_revs = np.argsort(orig_means, axis=0)[::-1]
-        mid_revs = top_revs[5:20, dummy_paps]
+        mid_revs = top_revs[20:30, dummy_paps]
         # dummy_revs = np.random.choice(m, num_dummies, replace=False)
         std_devs = np.ones(orig_means.shape) * std_dev_of_real
         loc = np.zeros(orig_means.shape)
 
         for p in dummy_paps:
-            std_devs[mid_revs[:, p], [p]*15] = std_dev_of_dummies
-            loc[mid_revs[:, p], [p]*15] = .1
+            std_devs[mid_revs[:, p], [p]*10] = 0
+            loc[mid_revs[:, p], [p]*10] = 2*std_dev_of_dummies
 
         means = orig_means + gen.normal(loc=loc, scale=std_devs)
+
+        for p in dummy_paps:
+            std_devs[mid_revs[:, p], [p]*10] = std_dev_of_dummies
+
         true_scores = orig_means.copy()
 
     m, n = means.shape

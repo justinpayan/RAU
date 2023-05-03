@@ -24,7 +24,7 @@ if __name__ == "__main__":
     year = args.year
     seed = args.seed
 
-    sample_size = .1
+    sample_size = .6
 
     noise_model = "ellipse"
 

@@ -68,7 +68,7 @@ def get_worst_case(alloc, tpms, std_devs, noise_model="ball", prev_worst=None):
         print(np.sqrt(chi2.ppf(.95, alloc.size)))
         print(np.sum(((tpms.ravel()-tpms.ravel()) * (1/std_devs.ravel()))**2))
         if prev_worst is not None:
-            u.value = prev_worst.reshape((1, -1))
+            u.value = prev_worst.reshape((-1,))
             prob.solve(warm_start=True)
         else:
             prob.solve()

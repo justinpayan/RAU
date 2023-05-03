@@ -1,9 +1,10 @@
 import pickle
 import math
 
-from solve_usw import solve_usw_gurobi
 from solve_max_min import solve_max_min
 from utils import *
+
+import time
 
 import argparse
 
@@ -23,6 +24,8 @@ if __name__ == "__main__":
     year = args.year
     seed = args.seed
 
+    sample_size = .1
+
     noise_model = "ellipse"
 
     fname = "stat_dict_iclr_%d_%d.pkl" % (year, seed)
@@ -33,14 +36,14 @@ if __name__ == "__main__":
 
         # Take a subsample of the reviewers and papers
         m, n = means.shape
-        sampled_revs = np.random.choice(range(m), math.floor(.9*m))
-        sampled_paps = np.random.choice(range(n), math.floor(.9*n))
+        sampled_revs = np.random.choice(range(m), math.floor(sample_size*m))
+        sampled_paps = np.random.choice(range(n), math.floor(sample_size*n))
 
         std_devs = std_devs[sampled_revs, :][:, sampled_paps]
         means = means[sampled_revs, :][:, sampled_paps]
 
-        covs = np.ones(math.floor(.9*n)) * 3
-        loads = np.ones(math.floor(.9*m)) * 6
+        covs = np.ones(math.floor(sample_size*n)) * 3
+        loads = np.ones(math.floor(sample_size*m)) * 6
 
         # Save the data used for this run
         np.save(os.path.join(data_dir, "outputs", "std_devs_iclr_%d_%d.npy" % (year, seed)), std_devs)
@@ -48,7 +51,9 @@ if __name__ == "__main__":
 
         # Run the max-min model
         # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
+        st = time.time()
         fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model)
+        rra_time = time.time() - st
 
         np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_iclr_%d_%d.npy" % (year, seed)), fractional_alloc_max_min)
         # alloc_max_min = best_of_n_bvn(fractional_alloc_max_min, tpms, error_bound, n=10)
@@ -100,6 +105,8 @@ if __name__ == "__main__":
         print("Worst case USW from max_min optimizer: %.2f" % worst_case_obj_max_min)
         stat_dict['worst_usw_maxmin'] = worst_case_obj_max_min
         # print("Efficiency loss for max_min (percent of opt): %.2f" % (100 * (opt - true_obj_max_min) / opt))
+        print("RRA took %.2f secs" % rra_time)
+        stat_dict['rra_time'] = rra_time
 
         with open(os.path.join(data_dir, "outputs", fname), 'wb') as f:
             pickle.dump(stat_dict, f)

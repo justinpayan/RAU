@@ -46,7 +46,7 @@ def bvn(fractional_alloc):
     return rounded_alloc
 
 
-def get_worst_case(alloc, tpms, std_devs, noise_model="ball"):
+def get_worst_case(alloc, tpms, std_devs, noise_model="ball", prev_worst=None):
     if noise_model == "ball":
         # s = cp.Variable(tpms.shape[0] * tpms.shape[1])
         #
@@ -63,17 +63,22 @@ def get_worst_case(alloc, tpms, std_devs, noise_model="ball"):
         soc_constraint = [cp.SOC(np.sqrt(chi2.ppf(.95, alloc.size)), cp.multiply(u-tpms.ravel(), 1/std_devs.ravel()))]
         prob = cp.Problem(cp.Minimize(alloc.ravel().T @ u),
                           soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
+
         # prob.solve(solver='SCS')
         print(np.sqrt(chi2.ppf(.95, alloc.size)))
         print(np.sum(((tpms.ravel()-tpms.ravel()) * (1/std_devs.ravel()))**2))
-        prob.solve()
+        if prev_worst is not None:
+            u.value = prev_worst.reshape((1, -1))
+            prob.solve(warm_start=True)
+        else:
+            prob.solve()
         print()
         print(u.value)
 
         return u.value.reshape(tpms.shape)
 
 
-def project_to_feasible_exact(alloc, covs, loads, use_verbose=False):
+def project_to_feasible_exact(alloc, covs, loads, use_verbose=False, init_guess=None):
     # The allocation probably violates the coverage and reviewer load bounds.
     # Find the allocation with the smallest L2 distance from the current one such
     # that the constraints are satisfied
@@ -87,7 +92,13 @@ def project_to_feasible_exact(alloc, covs, loads, use_verbose=False):
                    x >= np.zeros(x.shape),
                    x <= np.ones(x.shape)]
     prob = cp.Problem(cp.Minimize(cost), constraints)
-    prob.solve(verbose=use_verbose)
+
+    if init_guess is not None:
+        x.value = init_guess
+        prob.solve(warm_start=True)
+    else:
+        prob.solve()
+
     return x.value
 
 def project_to_feasible(alloc, covs, loads, max_iter=np.inf):
@@ -247,6 +258,8 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
     print("proj_prob is DPP? ", proj_prob.is_dcp(dpp=True))
     print("proj_prob is DCP? ", proj_prob.is_dcp(dpp=False))
 
+    worst_s = tpms.copy()
+
     while not converged and t < max_iter:
         # Compute the worst-case S matrix using second order cone programming
         print("Computing worst case S matrix")
@@ -263,7 +276,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
             worst_s = u.value
             # worst_s = u.value.reshape(tpms.shape)
         else:
-            worst_s = get_worst_case(alloc, tpms, std_devs, noise_model=noise_model)
+            worst_s = get_worst_case(alloc, tpms, std_devs, noise_model=noise_model, prev_worst=worst_s)
         adv_times.append(time.time() - st)
 
         # Update the allocation
@@ -293,7 +306,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
                 # alloc = x.value.reshape(tpms.shape)
                 alloc = x.value
             else:
-                alloc = project_to_feasible_exact(alloc, covs, loads)
+                alloc = project_to_feasible_exact(alloc, covs, loads, init_guess=old_alloc)
         proj_times.append(time.time() - st)
 
         # Check for convergence, update t
@@ -324,8 +337,11 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         # final_alloc = x.value.reshape(tpms.shape)
         final_alloc = x.value
     else:
-        final_alloc = project_to_feasible_exact(global_opt_alloc, covs, loads)
+        final_alloc = project_to_feasible_exact(global_opt_alloc, covs, loads, init_guess=old_alloc)
     proj_times.append(time.time() - st)
+
+    print("Adv times: ", adv_times)
+    print("Proj times: ", proj_times)
 
     return final_alloc
 

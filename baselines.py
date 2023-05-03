@@ -920,7 +920,8 @@ def greedy(scores, loads, covs, best_revs):
 def fairseq(scores, covs, loads):
     best_revs = np.argsort(-1 * scores, axis=0)
     alloc, _ = greedy(scores, loads, covs, best_revs)
-    numpy_alloc = np.zeros(alloc.shape)
+
+    numpy_alloc = np.zeros(scores.shape)
 
     for p in alloc:
         numpy_alloc[alloc[p], p] = 1
@@ -943,7 +944,7 @@ def pr4a(pra, covs, loads, iter_limit=1):
 
     alloc = pr4a_instance.fa
 
-    numpy_alloc = np.zeros(alloc.shape)
+    numpy_alloc = np.zeros(pra.shape)
 
     for p in alloc:
         numpy_alloc[alloc[p], p] = 1

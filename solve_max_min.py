@@ -69,9 +69,9 @@ def get_worst_case(alloc, tpms, std_devs, noise_model="ball", prev_worst=None):
         print(np.sum(((tpms.ravel()-tpms.ravel()) * (1/std_devs.ravel()))**2))
         if prev_worst is not None:
             u.value = prev_worst.reshape((-1,))
-            prob.solve(warm_start=True)
+            prob.solve(warm_start=True, solver="SCS")
         else:
-            prob.solve()
+            prob.solve(solver="SCS")
         print()
         print(u.value)
 

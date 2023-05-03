@@ -933,7 +933,7 @@ def pr4a(pra, covs, loads, iter_limit=1):
     pra[np.where(pra < 0)] = 0
     pra /= np.max(pra)
 
-    pr4a_instance = auto_assigner(pra, demand=covs[0], ability=loads, iter_limit=iter_limit)
+    pr4a_instance = auto_assigner(pra, demand=int(covs[0]), ability=loads, iter_limit=iter_limit)
     pr4a_instance.fair_assignment()
 
     alloc = pr4a_instance.fa

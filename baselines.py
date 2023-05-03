@@ -919,7 +919,7 @@ def greedy(scores, loads, covs, best_revs):
 
 def fairseq(scores, covs, loads):
     best_revs = np.argsort(-1 * scores, axis=0)
-    alloc, _ = greedy(scores, covs, loads, best_revs)
+    alloc, _ = greedy(scores, loads, covs, best_revs)
     return alloc
 
 

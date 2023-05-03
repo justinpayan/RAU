@@ -1,7 +1,7 @@
 import pickle
 import math
 
-from solve_max_min import solve_max_min
+from baselines import *
 from utils import *
 
 import time
@@ -24,13 +24,13 @@ if __name__ == "__main__":
     year = args.year
     seed = args.seed
 
-    sample_size = .6
+    sample_size = .1
 
     noise_model = "ellipse"
 
     np.random.seed(seed)
 
-    fname = "stat_dict_iclr_%d_%d.pkl" % (year, seed)
+    fname = "stat_dict_iclr_baselines_%d_%d.pkl" % (year, seed)
     if not os.path.isfile(os.path.join(data_dir, "outputs", fname)):
         # Load in the ellipse
         std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
@@ -47,68 +47,45 @@ if __name__ == "__main__":
         covs = np.ones(math.floor(sample_size*n)) * 3
         loads = np.ones(math.floor(sample_size*m)) * 6
 
-        # Save the data used for this run
-        np.save(os.path.join(data_dir, "outputs", "std_devs_iclr_%d_%d.npy" % (year, seed)), std_devs)
-        np.save(os.path.join(data_dir, "outputs", "means_iclr_%d_%d.npy" % (year, seed)), means)
+        # Run the baselines -- PR4A, FairFlow, and FairSeq
+        print("Solving FairSeq", flush=True)
+        fairseq_alloc = fairseq(means, covs, loads)
 
-        # Run the max-min model
-        # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
-        st = time.time()
-        fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model)
-        rra_time = time.time() - st
+        np.save(os.path.join(data_dir, "outputs", "fairseq_alloc_iclr_%d_%d.npy" % (year, seed)), fairseq_alloc)
 
-        np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_iclr_%d_%d.npy" % (year, seed)), fractional_alloc_max_min)
-        # alloc_max_min = best_of_n_bvn(fractional_alloc_max_min, tpms, error_bound, n=10)
-        alloc_max_min = bvn(fractional_alloc_max_min)
-        np.save(os.path.join(data_dir, "outputs", "max_min_alloc_iclr_%d_%d.npy" % (year, seed)), alloc_max_min)
+        print("Solving PR4A", flush=True)
+        pr4a_alloc = pr4a(means, covs, loads)
 
-        # Run the baseline, which is just TPMS
-        print("Solving for max USW using TPMS scores", flush=True)
-        objective_score, alloc = solve_usw_gurobi(means, covs, loads)
+        np.save(os.path.join(data_dir, "outputs", "pr4a_alloc_iclr_%d_%d.npy" % (year, seed)), pr4a_alloc)
 
-        np.save(os.path.join(data_dir, "outputs", "tpms_alloc_iclr_%d_%d.npy" % (year, seed)), alloc)
+        print("Solving FairFlow", flush=True)
+        fairflow_alloc = fairflow(means, covs, loads)
 
-        # true_obj = np.sum(alloc * true_scores)
+        np.save(os.path.join(data_dir, "outputs", "fairflow_alloc_iclr_%d_%d.npy" % (year, seed)), fairflow_alloc)
 
-        # print("Solving for max USW using true bids")
-        # opt, opt_alloc = solve_usw_gurobi(true_scores, covs, loads)
+        worst_s = get_worst_case(fairseq_alloc, means, std_devs, noise_model=noise_model)
+        worst_case_obj_fairseq = np.sum(worst_s * fairseq_alloc)
 
-        # np.save("opt_alloc_%s_%d_%.1f.npy" % (dset_name, seed, alpha), opt_alloc)
+        worst_s = get_worst_case(pr4a_alloc, means, std_devs, noise_model=noise_model)
+        worst_case_obj_pr4a = np.sum(worst_s * pr4a_alloc)
 
-        print(loads)
-        print(np.sum(alloc_max_min, axis=1))
-        print(covs)
-        print(np.sum(alloc_max_min, axis=0))
-        print(np.all(np.sum(alloc_max_min, axis=1) <= loads))
-        print(np.all(np.sum(alloc_max_min, axis=0) == covs))
-
-        worst_s = get_worst_case(alloc, means, std_devs, noise_model=noise_model)
-        worst_case_obj_tpms = np.sum(worst_s * alloc)
-
-        worst_s = get_worst_case(alloc_max_min, means, std_devs, noise_model=noise_model)
-        worst_case_obj_max_min = np.sum(worst_s * alloc_max_min)
+        worst_s = get_worst_case(fairflow_alloc, means, std_devs, noise_model=noise_model)
+        worst_case_obj_fairflow = np.sum(worst_s * fairflow_alloc)
 
         stat_dict = {}
         print("\n*******************\n*******************\n*******************\n")
         print("Stats for ICLR %d with seed %d" % (year, seed))
-        # print("Optimal USW: %.2f" % opt)
-        # stat_dict['opt_usw'] = opt
         print("\n")
-        print("Estimated USW from using TPMS scores: %.2f" % objective_score)
-        stat_dict['est_usw_tpms'] = objective_score
-        # print("True USW from using TPMS scores: %.2f" % true_obj)
-        # stat_dict['true_usw_tpms'] = true_obj
-        print("Worst case USW from using TPMS scores: %.2f" % worst_case_obj_tpms)
-        stat_dict['worst_usw_tpms'] = worst_case_obj_tpms
-        # print("Efficiency loss from using TPMS scores (percent of opt): %.2f" % (100 * (opt - true_obj) / opt))
+
+        print("Worst case USW from FairSeq: %.2f" % worst_case_obj_fairseq)
+        stat_dict['worst_usw_fairseq'] = worst_case_obj_fairseq
         print("\n")
-        # print("True USW from max_min optimizer: %.2f" % true_obj_max_min)
-        # stat_dict['true_usw_maxmin'] = true_obj_max_min
-        print("Worst case USW from max_min optimizer: %.2f" % worst_case_obj_max_min)
-        stat_dict['worst_usw_maxmin'] = worst_case_obj_max_min
-        # print("Efficiency loss for max_min (percent of opt): %.2f" % (100 * (opt - true_obj_max_min) / opt))
-        print("RRA took %.2f secs" % rra_time)
-        stat_dict['rra_time'] = rra_time
+        print("Worst case USW from PR4A: %.2f" % worst_case_obj_pr4a)
+        stat_dict['worst_usw_pr4a'] = worst_case_obj_pr4a
+        print("\n")
+        print("Worst case USW from FairFlow: %.2f" % worst_case_obj_fairflow)
+        stat_dict['worst_usw_fairflow'] = worst_case_obj_fairflow
+        print("\n")
 
         with open(os.path.join(data_dir, "outputs", fname), 'wb') as f:
             pickle.dump(stat_dict, f)

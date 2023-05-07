@@ -297,7 +297,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         print("Projecting to feasible set: %s elapsed" % (time.time() - st), flush=True)
         st = time.time()
         if dykstra:
-            alloc = project_to_feasible(alloc, covs, loads, max_iter=1500)
+            alloc = project_to_feasible(alloc, covs, loads, max_iter=1000)
         else:
             if caching:
                 # alloc_param.value = alloc.ravel()

@@ -54,7 +54,7 @@ if __name__ == "__main__":
         # Run the max-min model
         # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
         st = time.time()
-        fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model)
+        fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, dykstra=True)
         rra_time = time.time() - st
 
         np.save(os.path.join(data_dir, "outputs", "fractional_max_min_alloc_iclr_%d_%d.npy" % (year, seed)), fractional_alloc_max_min)

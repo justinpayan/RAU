@@ -25,7 +25,7 @@ for year in range(2018, 2023):
     fairseq_avg_cases = []
 
     for seed in range(100):
-        print("Seed ", seed)
+        print("Seed ", seed, flush=True)
         fname = "stat_dict_iclr_%d_%d.pkl" % (year, seed)
         with open(os.path.join(output_dir, fname), 'rb') as f:
             x = pickle.load(f)
@@ -109,5 +109,5 @@ for year in range(2018, 2023):
                                                                      np.mean(fairseq_avg_cases) / n,
                                                                      np.std(fairseq_avg_cases) / n)
 
-print(table_str)
-print(baselines_str)
+    print(table_str)
+    print(baselines_str)

@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import uuid
 
 from solve_max_min import get_worst_case
 
@@ -99,7 +100,8 @@ def bvn(fractional_alloc):
     # while np.any((0 < fractional_alloc) * (fractional_alloc < 1)):
     #     # Find a simple cycle or maximal path
     #     path = find_path(fractional_alloc)
-    with open("fractional_alloc.txt", 'w') as f:
+    tmp_fname = str(uuid.uuid4()) + ".txt"
+    with open(tmp_fname, 'w') as f:
         m, n = fractional_alloc.shape
         f.write("%d %d\n" % (m, n))
         f.write("1\n"*m)
@@ -112,11 +114,12 @@ def bvn(fractional_alloc):
                 asst_str += "%d %d %.6f\n" % (r, p+m, np.abs(assn))
         f.write(asst_str[:-1])
 
-    os.system("/mnt/nfs/scratch1/jpayan/MinimalBidding/a.out < fractional_alloc.txt > output_bvn.txt")
+    os.system("/mnt/nfs/scratch1/jpayan/MinimalBidding/a.out < %s > output_%s" % (tmp_fname, tmp_fname))
 
     rounded_alloc = np.zeros(fractional_alloc.shape)
-    with open("output_bvn.txt", 'r') as f:
+    with open("output_%s" % tmp_fname, 'r') as f:
         lines = f.readlines()
+        print(lines)
         for line in lines:
             r, p = line.strip().split()
             r = int(r)

@@ -2,7 +2,7 @@ import numpy as np
 
 # from docplex.mp.model import Model
 from gurobipy import *
-
+import gurobipy as gp
 
 def solve_usw(affinity_scores, covs, loads):
     opt_mod = Model(name="Max USW")

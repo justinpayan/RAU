@@ -58,8 +58,10 @@ def solve_gesw_gurobi(affinity_scores, covs, loads, groups):
 
     # m.addConstrs((x.sum(paper, '*') == covs[paper] for paper in papers), 'covs')  # Paper coverage constraints
     # m.addConstrs((x.sum('*', rev) <= loads[rev] for rev in revs), 'loads_ub')  # Reviewer load constraints
-    m.addConstr(x @ pap_ones <= loads, 'loads_ub')  # Reviewer load constraints
-    m.addConstr(x.T @ rev_ones == covs, 'covs')  # Paper coverage constraints
+    # m.addConstr(x @ pap_ones <= loads, 'loads_ub')  # Reviewer load constraints
+    # m.addConstr(x.T @ rev_ones == covs, 'covs')  # Paper coverage constraints
+    m.addConstr(x.sum(axis=0) == covs, name='covs')
+    m.addConstr(x.sum(axis=1) <= loads, name='loads')
 
     # Add constraint to make c = group esw (c <= group usw for all groups)
     num_groups = int(np.max(groups)) + 1

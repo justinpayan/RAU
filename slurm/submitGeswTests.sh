@@ -2,7 +2,7 @@
 
 DATA_DIR=/mnt/nfs/scratch1/jpayan/RAU
 LOG_DIR=/mnt/nfs/scratch1/jpayan/logs/RAU
-ALGO=GESW
+ALGO=$1
 
 for YEAR in {2018..2022}; do
   sbatch --time=05-11:00:00 --partition=longq \

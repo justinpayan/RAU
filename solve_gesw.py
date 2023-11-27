@@ -49,7 +49,7 @@ def solve_gesw_gurobi(affinity_scores, covs, loads, groups):
 
     m = Model("TPMS")
     x = m.addMVar(shape=affinity_scores.shape, vtype=GRB.BINARY, name='asst')
-    c = m.addVar(0.0, 1000.0, name='gesw')
+    c = m.addVar(0.0, 1000.0, obj=1.0, name='gesw')
 
     # Add general constraints
     # add_constrs_to_model(m, x, covs, loads)

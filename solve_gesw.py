@@ -52,7 +52,14 @@ def solve_gesw_gurobi(affinity_scores, covs, loads, groups):
     c = m.addVar(0.0, 1000.0, name='gesw')
 
     # Add general constraints
-    add_constrs_to_model(m, x, covs, loads)
+    # add_constrs_to_model(m, x, covs, loads)
+    rev_ones = np.ones(affinity_scores.shape[0])
+    pap_ones = np.ones(affinity_scores.shape[1])
+
+    # m.addConstrs((x.sum(paper, '*') == covs[paper] for paper in papers), 'covs')  # Paper coverage constraints
+    # m.addConstrs((x.sum('*', rev) <= loads[rev] for rev in revs), 'loads_ub')  # Reviewer load constraints
+    m.addConstr(x @ pap_ones <= loads, 'loads_ub')  # Reviewer load constraints
+    m.addConstr(x.T @ rev_ones == covs, 'covs')  # Paper coverage constraints
 
     # Add constraint to make c = group esw (c <= group usw for all groups)
     num_groups = int(np.max(groups)) + 1
@@ -60,8 +67,7 @@ def solve_gesw_gurobi(affinity_scores, covs, loads, groups):
     for g in range(num_groups):
         group_size = np.where(groups == g)[0].shape[0]
         group_indicator = (groups == g).astype(int)
-        ones = np.ones(affinity_scores.shape[0])
-        group_welfare = (realized_scores @ group_indicator) @ ones
+        group_welfare = (realized_scores @ group_indicator) @ rev_ones
         group_welfare /= group_size
         m.addConstr(group_welfare >= c, name=('c%d' % g))
 

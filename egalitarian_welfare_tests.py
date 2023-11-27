@@ -41,7 +41,7 @@ if __name__ == "__main__":
         std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
         means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
 
-        group_labels = np.load("group_ids_%d.npy" % year)
+        group_labels = np.load(os.path.join(data_dir, "data", "iclr", "group_ids_%d.npy" % year))
 
         # Take a subsample of the reviewers and papers
         m, n = means.shape
@@ -135,7 +135,7 @@ if __name__ == "__main__":
         std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
         means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
 
-        group_labels = np.load("group_ids_%d.npy" % year)
+        group_labels = np.load(os.path.join(data_dir, "data", "iclr", "group_ids_%d.npy" % year))
 
         # Take a subsample of the reviewers and papers
         m, n = means.shape

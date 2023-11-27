@@ -6,7 +6,7 @@ ALGO=GESW
 
 for YEAR in {2018..2022}; do
   sbatch --time=05-11:00:00 --partition=longq \
-  --nodes=1 --ntasks=1 --mem=40G --output=$LOG_DIR/gesw_tests_${YEAR}.out \
-  --error=$LOG_DIR/gesw_tests_${YEAR}.err --job-name=gesw_tests_${YEAR} \
+  --nodes=1 --ntasks=1 --mem=40G --output=$LOG_DIR/gesw_tests_${YEAR}_${ALGO}.out \
+  --error=$LOG_DIR/gesw_tests_${YEAR}_${ALGO}.err --job-name=gesw_tests_${YEAR}_${ALGO} \
   ./geswTests.sh $DATA_DIR $YEAR $ALGO
 done

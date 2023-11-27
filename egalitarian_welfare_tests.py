@@ -3,9 +3,9 @@ import math
 
 from solve_gesw import solve_gesw_gurobi
 from solve_usw import solve_usw_gurobi
-from solve_max_min import solve_max_min
+from solve_max_min import solve_max_min, solve_max_min_alt
 from utils import *
-
+import time
 import argparse
 
 
@@ -74,17 +74,31 @@ if __name__ == "__main__":
         # np.save(os.path.join(data_dir, "outputs", "max_min_alloc_iclr_%d_%d.npy" % (year, seed)), alloc_max_min)
 
         # Run the baseline, which is just TPMS
+        st = time.time()
         if algo == "LP":
             print("Solving for max USW", flush=True)
-            objective_score, alloc = solve_usw_gurobi(means, covs, loads)
+            est_usw, alloc = solve_usw_gurobi(means, covs, loads)
 
             np.save(os.path.join(data_dir, "outputs", "tpms_alloc_iclr_%d.npy" % year), alloc)
 
         elif algo == "GESW":
             print("Solving for max GESW", flush=True)
-            objective_score, alloc = solve_gesw_gurobi(means, covs, loads, group_labels)
+            est_usw, alloc = solve_gesw_gurobi(means, covs, loads, group_labels)
 
             np.save(os.path.join(data_dir, "outputs", "gesw_alloc_iclr_%d.npy" % year), alloc)
+
+        elif algo == "RRA":
+            print("Solving for max robust USW using Elitas RRA", flush=True)
+            alloc = solve_max_min_alt(means, covs, loads, std_devs, integer=True, rsquared=None, check=False)
+            est_usw = np.sum(alloc * means)
+
+        elif algo == "RRA_ORIG":
+            print("Solving for max robust USW using the original RRA formulation", flush=True)
+            fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model)
+            alloc = bvn(fractional_alloc_max_min)
+            est_usw = np.sum(alloc * means)
+
+        print("Solver took %s secs" % (time.time() - st))
 
         est_gesw = gesw(group_labels, alloc, means)
 
@@ -119,8 +133,8 @@ if __name__ == "__main__":
         # print("Optimal USW: %.2f" % opt)
         # stat_dict['opt_usw'] = opt
         print("\n")
-        print("Estimated USW: %.2f" % (objective_score/n))
-        stat_dict['est_usw'] = objective_score/n
+        print("Estimated USW: %.2f" % (est_usw/n))
+        stat_dict['est_usw'] = est_usw/n
         print("True USW: %.2f" % np.mean(true_usws))
         stat_dict['true_usw'] = np.mean(true_usws)
 

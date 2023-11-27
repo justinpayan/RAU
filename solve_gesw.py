@@ -79,6 +79,6 @@ def solve_gesw_gurobi(affinity_scores, covs, loads, groups):
     m.optimize()
 
     # Convert to the format we were using, and then print it out and run print_stats
-    alloc = convert_to_mat(m, covs.shape[0], loads.shape[0])
+    alloc = x.X
 
     return m.objVal, alloc

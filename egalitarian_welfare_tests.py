@@ -1,6 +1,7 @@
 import pickle
 import math
 
+from solve_gesw import solve_gesw_gurobi
 from solve_usw import solve_usw_gurobi
 from solve_max_min import solve_max_min
 from utils import *
@@ -13,6 +14,7 @@ def parse_args():
     parser.add_argument("--data_dir", type=str, default=".")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--year", type=int)
+    parser.add_argument("--algo", type=str)
 
     return parser.parse_args()
 
@@ -32,10 +34,11 @@ if __name__ == "__main__":
     args = parse_args()
     data_dir = args.data_dir
     year = args.year
+    algo = args.algo
 
     noise_model = "ellipse"
 
-    fname = "stat_dict_iclr_%d.pkl" % year
+    fname = "stat_dict_iclr_%d_%s.pkl" % (year, algo)
     if not os.path.isfile(os.path.join(data_dir, "outputs", fname)):
         # Load in the ellipse
         std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
@@ -71,10 +74,17 @@ if __name__ == "__main__":
         # np.save(os.path.join(data_dir, "outputs", "max_min_alloc_iclr_%d_%d.npy" % (year, seed)), alloc_max_min)
 
         # Run the baseline, which is just TPMS
-        print("Solving for max USW using TPMS scores", flush=True)
-        objective_score, alloc = solve_usw_gurobi(means, covs, loads)
+        if algo == "LP":
+            print("Solving for max USW", flush=True)
+            objective_score, alloc = solve_usw_gurobi(means, covs, loads)
 
-        np.save(os.path.join(data_dir, "outputs", "tpms_alloc_iclr_%d.npy" % year), alloc)
+            np.save(os.path.join(data_dir, "outputs", "tpms_alloc_iclr_%d.npy" % year), alloc)
+
+        elif algo == "GESW":
+            print("Solving for max GESW", flush=True)
+            objective_score, alloc = solve_gesw_gurobi(means, covs, loads, group_labels)
+
+            np.save(os.path.join(data_dir, "outputs", "gesw_alloc_iclr_%d.npy" % year), alloc)
 
         est_gesw = gesw(group_labels, alloc, means)
 
@@ -105,19 +115,19 @@ if __name__ == "__main__":
 
         stat_dict = {}
         print("\n*******************\n*******************\n*******************\n")
-        print("Stats for ICLR %d" % year)
+        print("Stats for ICLR %d with algo %s" % (year, algo))
         # print("Optimal USW: %.2f" % opt)
         # stat_dict['opt_usw'] = opt
         print("\n")
-        print("Estimated USW from using TPMS scores: %.2f" % (objective_score/n))
-        stat_dict['est_usw_tpms'] = objective_score/n
-        print("True USW from using TPMS scores: %.2f" % np.mean(true_usws))
-        stat_dict['true_usw_tpms'] = np.mean(true_usws)
+        print("Estimated USW: %.2f" % (objective_score/n))
+        stat_dict['est_usw'] = objective_score/n
+        print("True USW: %.2f" % np.mean(true_usws))
+        stat_dict['true_usw'] = np.mean(true_usws)
 
-        print("Estimated GESW from using TPMS scores: %.2f" % est_gesw)
-        stat_dict['est_gesw_tpms'] = est_gesw
-        print("True GESW from using TPMS scores: %.2f" % np.mean(true_gesws))
-        stat_dict['true_gesw_tpms'] = np.mean(true_gesws)
+        print("Estimated GESW: %.2f" % est_gesw)
+        stat_dict['est_gesw'] = est_gesw
+        print("True GESW: %.2f" % np.mean(true_gesws))
+        stat_dict['true_gesw'] = np.mean(true_gesws)
         # print("Worst case USW from using TPMS scores: %.2f" % worst_case_obj_tpms)
         # stat_dict['worst_usw_tpms'] = worst_case_obj_tpms
         # print("Efficiency loss from using TPMS scores (percent of opt): %.2f" % (100 * (opt - true_obj) / opt))

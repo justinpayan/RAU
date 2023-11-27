@@ -91,12 +91,15 @@ if __name__ == "__main__":
             print("Solving for max robust USW using Elitas RRA", flush=True)
             alloc = solve_max_min_alt(means, covs, loads, std_devs, integer=True, rsquared=None, check=False)
             est_usw = np.sum(alloc * means)
+            np.save(os.path.join(data_dir, "outputs", "rra_alloc_iclr_%d.npy" % year), alloc)
+
 
         elif algo == "RRA_ORIG":
             print("Solving for max robust USW using the original RRA formulation", flush=True)
             fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model)
             alloc = bvn(fractional_alloc_max_min)
             est_usw = np.sum(alloc * means)
+            np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_iclr_%d.npy" % year), alloc)
 
         print("Solver took %s secs" % (time.time() - st))
 

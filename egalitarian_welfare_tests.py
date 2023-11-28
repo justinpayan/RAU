@@ -78,13 +78,11 @@ if __name__ == "__main__":
         if algo == "LP":
             print("Solving for max USW", flush=True)
             est_usw, alloc = solve_usw_gurobi(means, covs, loads)
-
             np.save(os.path.join(data_dir, "outputs", "tpms_alloc_iclr_%d.npy" % year), alloc)
 
         elif algo == "GESW":
             print("Solving for max GESW", flush=True)
             est_usw, alloc = solve_gesw_gurobi(means, covs, loads, group_labels)
-
             np.save(os.path.join(data_dir, "outputs", "gesw_alloc_iclr_%d.npy" % year), alloc)
 
         elif algo == "RRA":
@@ -93,10 +91,9 @@ if __name__ == "__main__":
             est_usw = np.sum(alloc * means)
             np.save(os.path.join(data_dir, "outputs", "rra_alloc_iclr_%d.npy" % year), alloc)
 
-
         elif algo == "RRA_ORIG":
             print("Solving for max robust USW using the original RRA formulation", flush=True)
-            fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model)
+            fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, caching=True, dykstra=True)
             alloc = bvn(fractional_alloc_max_min)
             est_usw = np.sum(alloc * means)
             np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_iclr_%d.npy" % year), alloc)

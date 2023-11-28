@@ -2,6 +2,7 @@ import numpy as np
 import os
 import cvxpy as cp
 import time
+import uuid
 
 from scipy.stats.distributions import chi2
 
@@ -100,6 +101,7 @@ def project_to_feasible_exact(alloc, covs, loads, use_verbose=False, init_guess=
         prob.solve()
 
     return x.value
+
 
 def project_to_feasible(alloc, covs, loads, max_iter=np.inf):
     # The allocation probably violates the coverage and reviewer load bounds.
@@ -202,6 +204,9 @@ def project_to_integer(alloc, covs, loads, use_verbose=False):
 # the tpms scores.
 def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noise_model="ball"):
     assert noise_model in ["ball", "ellipse"]
+
+    run_name = uuid.uuid1()
+    print("Run name: ", run_name)
 
     st = time.time()
     print("Solving for initial max USW alloc", flush=True)
@@ -318,6 +323,10 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         if prev_obj_val > global_opt_obj:
             global_opt_obj = prev_obj_val
             global_opt_alloc = old_alloc
+            steps_no_imp = 0
+            print("Also saving out this allocation")
+            np.save(os.path.join("/mnt/nfs/scratch1/jpayan/RAU/outputs", "global_opt_alloc_%d_%d.npy" % (run_name, t)),
+                    global_opt_alloc)
         else:
             steps_no_imp += 1
 

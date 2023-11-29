@@ -150,6 +150,8 @@ if __name__ == "__main__":
         true_gesws = []
         for i in range(100):
             true_scores = np.load(os.path.join(data_dir, "data", "iclr", "outcomes_%d_%d.npy" % (year, i)))
+            true_scores = true_scores[sampled_revs, :][:, sampled_paps]
+
             true_usws.append(np.sum(alloc * true_scores)/n)
             true_gesws.append(gesw(group_labels, alloc, true_scores))
 
@@ -161,12 +163,12 @@ if __name__ == "__main__":
         print("\n")
         print("Estimated USW: %.2f" % (est_usw/n))
         stat_dict['est_usw'] = est_usw/n
-        print("True USW: %.2f" % np.mean(true_usws))
+        print("True USW: %.2f \\pm %.2f" % (np.mean(true_usws), np.std(true_usws)))
         stat_dict['true_usw'] = np.mean(true_usws)
 
         print("Estimated GESW: %.2f" % est_gesw)
         stat_dict['est_gesw'] = est_gesw
-        print("True GESW: %.2f" % np.mean(true_gesws))
+        print("True GESW: %.2f \\pm %.2f" % (np.mean(true_gesws), np.std(true_gesws)))
         stat_dict['true_gesw'] = np.mean(true_gesws)
         # print("Worst case USW from using TPMS scores: %.2f" % worst_case_obj_tpms)
         # stat_dict['worst_usw_tpms'] = worst_case_obj_tpms

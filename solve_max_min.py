@@ -391,7 +391,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
     proj_times = []
 
     def select_group(matrix, gls, group_id):
-        return matrix[:, np.where(gls == group_id)]
+        return matrix[:, np.where(gls == group_id)[0]]
 
     # Have an adversarial problem for each group
     n_groups = int(np.max(group_labels)) + 1

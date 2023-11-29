@@ -601,13 +601,7 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, integer=True, rsquared=None, 
     zeros = np.zeros(num)
     m.addConstr(beta >= zeros, name='c8')
 
-    print(n_reviewers, n_papers)
-    print(alloc.shape)
-    for i in range(n_reviewers):
-        print(i)
-        print(i*n_papers)
-
-    m.addConstrs(alloc[idx * n_papers:idx * (n_papers + 1)].sum() <= loads[idx] for idx in range(n_reviewers))
+    m.addConstrs(alloc[idx * n_papers:(idx+1) * n_papers].sum() <= loads[idx] for idx in range(n_reviewers))
     
     m.addConstrs(
         gp.quicksum(alloc[jdx * n_papers + idx] for jdx in range(n_reviewers)) == covs[idx] for idx in range(n_papers))

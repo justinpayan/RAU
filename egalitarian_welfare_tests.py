@@ -48,21 +48,25 @@ if __name__ == "__main__":
 
         # Take a subsample of the reviewers and papers
         m, n = means.shape
-        # sampled_revs = np.random.choice(range(m), math.floor(.9*m))
-        # sampled_paps = np.random.choice(range(n), math.floor(.9*n))
-        #
-        # std_devs = std_devs[sampled_revs, :][:, sampled_paps]
-        # means = means[sampled_revs, :][:, sampled_paps]
-        #
-        # covs = np.ones(math.floor(.9*n)) * 3
-        # loads = np.ones(math.floor(.9*m)) * 6
+        sample_frac = .05
+        sampled_revs = np.random.choice(range(m), math.floor(sample_frac*m))
+        sampled_paps = np.random.choice(range(n), math.floor(sample_frac*n))
 
-        covs = np.ones(n) * 3
-        loads = np.ones(m) * 6
+        std_devs = std_devs[sampled_revs, :][:, sampled_paps]
+        means = means[sampled_revs, :][:, sampled_paps]
+
+        covs = np.ones(math.floor(sample_frac*n)) * 3
+        loads = np.ones(math.floor(sample_frac*m)) * 6
+
+        # covs = np.ones(n) * 3
+        # loads = np.ones(m) * 6
 
         # Save the data used for this run
-        # np.save(os.path.join(data_dir, "outputs", "std_devs_iclr_%d_%d.npy" % (year, seed)), std_devs)
-        # np.save(os.path.join(data_dir, "outputs", "means_iclr_%d_%d.npy" % (year, seed)), means)
+        run_name = uuid.uuid1()
+        print("Run name: ", run_name)
+
+        np.save(os.path.join(data_dir, "outputs", "std_devs_iclr_%d_%d.npy" % (year, run_name)), std_devs)
+        np.save(os.path.join(data_dir, "outputs", "means_iclr_%d_%d.npy" % (year, run_name)), means)
 
         # Run the max-min model
         # fractional_alloc_max_min = solve_max_min_project_each_step(tpms, covs, loads, error_bound)
@@ -87,13 +91,16 @@ if __name__ == "__main__":
 
         elif algo == "RRA":
             print("Solving for max robust USW using Elitas RRA", flush=True)
-            alloc = solve_max_min_alt(means, covs, loads, std_devs, integer=True, rsquared=None, check=False)
+            fractional_alloc_max_min = solve_max_min_alt(means, covs, loads, std_devs, integer=False, rsquared=None, check=False)
+            np.save(os.path.join(data_dir, "outputs", "rra_frac_alloc_iclr_%d.npy" % year), fractional_alloc_max_min)
+            alloc = bvn(fractional_alloc_max_min)
             est_usw = np.sum(alloc * means)
             np.save(os.path.join(data_dir, "outputs", "rra_alloc_iclr_%d.npy" % year), alloc)
 
         elif algo == "RRA_ORIG":
             print("Solving for max robust USW using the original RRA formulation", flush=True)
-            fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, caching=True, dykstra=True)
+            fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, caching=True, dykstra=True, run_name=run_name)
+            np.save(os.path.join(data_dir, "outputs", "rra_orig_frac_alloc_iclr_%d.npy" % year), fractional_alloc_max_min)
             alloc = bvn(fractional_alloc_max_min)
             est_usw = np.sum(alloc * means)
             np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_iclr_%d.npy" % year), alloc)

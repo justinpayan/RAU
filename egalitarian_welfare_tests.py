@@ -24,12 +24,14 @@ def parse_args():
 def remap(group_labels):
     label_map = {}
     max_group_label = int(np.max(group_labels))
-    sorted_bad = sorted(set(range(max_group_label+1)) - set(group_labels.tolist()))
+    sorted_bad = sorted((set(range(max_group_label)) - set(group_labels.tolist())))
     ctr = 0
     for idx, i in enumerate(sorted_bad):
         while idx + ctr < i:
             label_map[idx + ctr] = ctr
             ctr += 1
+    label_map[max_group_label] = ctr
+
     final_clusters = deepcopy(group_labels)
     for idx in range(final_clusters.shape[0]):
         final_clusters[idx] = label_map[final_clusters[idx]]

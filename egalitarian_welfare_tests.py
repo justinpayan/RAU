@@ -115,7 +115,7 @@ if __name__ == "__main__":
         print("Solving for max robust USW using Elitas RRA", flush=True)
         fractional_alloc_max_min = solve_max_min_alt(means, covs, loads, std_devs, integer=False, rsquared=None, check=False)
         np.save(os.path.join(data_dir, "outputs", "rra_frac_alloc_iclr_%d.npy" % year), fractional_alloc_max_min)
-        alloc = bvn(fractional_alloc_max_min)
+        alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
         np.save(os.path.join(data_dir, "outputs", "rra_alloc_iclr_%d.npy" % year), alloc)
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
         print("Solving for max robust USW using the original RRA formulation", flush=True)
         fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, caching=True, dykstra=True, run_name=run_name)
         np.save(os.path.join(data_dir, "outputs", "rra_orig_frac_alloc_iclr_%d.npy" % year), fractional_alloc_max_min)
-        alloc = bvn(fractional_alloc_max_min)
+        alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
         np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_iclr_%d.npy" % year), alloc)
 

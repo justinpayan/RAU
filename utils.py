@@ -95,12 +95,12 @@ def load_dset(dname, seed, data_dir=".", noise_model="ball", alpha=0.5):
 
 # Implements https://ieeexplore.ieee.org/abstract/document/1181955
 # Use bvn.cpp from https://github.com/theryanl/mitigating_manipulation_via_randomized_reviewer_assignment/blob/master/core/bvn.cpp
-def bvn(fractional_alloc):
+def bvn(fractional_alloc, run_name):
     # # While there are fractional edges, find a simple cycle or maximal path
     # while np.any((0 < fractional_alloc) * (fractional_alloc < 1)):
     #     # Find a simple cycle or maximal path
     #     path = find_path(fractional_alloc)
-    tmp_fname = str(uuid.uuid4()) + ".txt"
+    tmp_fname = str(run_name) + ".txt"
     with open(tmp_fname, 'w') as f:
         m, n = fractional_alloc.shape
         f.write("%d %d\n" % (m, n))

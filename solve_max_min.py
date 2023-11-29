@@ -600,14 +600,18 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, integer=True, rsquared=None, 
     
     zeros = np.zeros(num)
     m.addConstr(beta >= zeros, name='c8')
-    
+
+    print(n_reviewers, n_papers)
+    print(alloc.shape)
+    for i in range(n_reviewers):
+        print(i)
+        print(i*n_papers)
+
     m.addConstrs(alloc[idx * n_papers:idx * (n_papers + 1)].sum() <= loads[idx] for idx in range(n_reviewers))
     
     m.addConstrs(
         gp.quicksum(alloc[jdx * n_papers + idx] for jdx in range(n_reviewers)) == covs[idx] for idx in range(n_papers))
-    
-    
-    
+
     m.addConstr(lamda * zeta * 4 == 1, name='c11')
 
     m.params.NonConvex = 2
@@ -623,13 +627,13 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, integer=True, rsquared=None, 
     beta_v = beta.X
     diff = (alloc_v - beta_v)
     affinity = mu - (diff * diag) / (2 * lamda_v)
-    if check == True:
+    if check:
         sigma = np.eye(num) * var
         print(check_ellipsoid(sigma, mu, affinity, rsquared))
     m.dispose()
     
     del m
-    return affinity, alloc_v
+    return affinity, alloc_v.reshape(n_reviewers, n_papers)
 
 
 def get_worst_case_alt(alloc, tpms, std_devs, noise_model="ball", rsquared=None, check=False):

@@ -360,12 +360,14 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
 def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False, noise_model="ball", run_name="default"):
     assert noise_model in ["ball", "ellipse"]
 
+    print("group_labels: ", group_labels)
+
     st = time.time()
     print("Solving for initial max GESW alloc", flush=True)
-    _, alloc = solve_gesw_gurobi(tpms, covs, loads, group_labels)
-    # alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
-    # alloc = np.clip(alloc, 0, 1)
-    # alloc = project_to_feasible(alloc, covs, loads)
+    # _, alloc = solve_gesw_gurobi(tpms, covs, loads, group_labels)
+    alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
+    alloc = np.clip(alloc, 0, 1)
+    alloc = project_to_feasible(alloc, covs, loads)
 
     global_opt_obj = 0.0
     global_opt_alloc = alloc.copy()
@@ -468,7 +470,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
         old_alloc = alloc.copy()
 
         alloc_grad = np.zeros(tpms.shape)
-        alloc_grad[:, np.where(group_labels == worst_group_id)] = select_group(worst_s_over_groups, group_labels, worst_group_id)
+        alloc_grad[:, np.where(group_labels == worst_group_id)[0]] = select_group(worst_s_over_groups, group_labels, worst_group_id)
 
         # vanilla update
         if t % 10 == 0:

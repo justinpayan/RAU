@@ -413,7 +413,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
         alloc_grp = select_group(alloc_param, group_labels, group_id)
 
         soc_constraint = [
-            cp.SOC(np.sqrt(chi2.ppf(tol, tpms.size)), cp.reshape(cp.multiply(u_grp - tpms_grp, 1 / std_devs_grp), (tpms_grp.shape[0]*tpms_grp.shape[1])))]
+            cp.SOC(np.sqrt(chi2.ppf(tol, tpms_grp.size)), cp.reshape(cp.multiply(u_grp - tpms_grp, 1 / std_devs_grp), (tpms_grp.shape[0]*tpms_grp.shape[1])))]
         adv_prob = cp.Problem(cp.Minimize(cp.sum(cp.multiply(alloc_grp, u_grp))),
                               soc_constraint + [u_grp >= np.zeros(u_grp.shape), u_grp <= np.ones(u_grp.shape)])
         adv_probs.append(adv_prob)

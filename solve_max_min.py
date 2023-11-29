@@ -203,7 +203,7 @@ def project_to_integer(alloc, covs, loads, use_verbose=False):
 # that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
 # out the maximin assignment where we worst-case over the true scores within "error_bound" of
 # the tpms scores.
-def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noise_model="ball", run_name="default", tol=.2):
+def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noise_model="ball", run_name="default", tol=.2, max_iter=30):
     assert noise_model in ["ball", "ellipse"]
 
     st = time.time()
@@ -219,7 +219,6 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
     print("Solving max min: %s elapsed" % (time.time() - st), flush=True)
 
     converged = False
-    max_iter = 30
 
     # Init params for grad asc
 
@@ -357,7 +356,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
 # that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
 # out the maximin assignment where we worst-case over the true scores within "error_bound" of
 # the tpms scores.
-def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False, noise_model="ball", run_name="default", tol=.2):
+def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False, noise_model="ball", run_name="default", tol=.2, max_iter=30):
     assert noise_model in ["ball", "ellipse"]
 
     print("group_labels: ", group_labels)
@@ -375,7 +374,6 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
     print("Solving GESW max min: %s elapsed" % (time.time() - st), flush=True)
 
     converged = False
-    max_iter = 30
 
     # Init params for grad asc
 

@@ -68,6 +68,7 @@ if __name__ == "__main__":
     # Take a subsample of the reviewers and papers
     m, n = means.shape
     sample_frac = .05
+    np.random.seed(1)
     sampled_revs = np.random.choice(range(m), math.floor(sample_frac*m))
     sampled_paps = np.random.choice(range(n), math.floor(sample_frac*n))
 

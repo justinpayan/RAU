@@ -33,8 +33,6 @@ def remap(group_labels):
             ctr += 1
     label_map[max_group_label] = ctr
 
-    print(label_map)
-
     final_clusters = deepcopy(group_labels)
     for idx in range(final_clusters.shape[0]):
         final_clusters[idx] = label_map[final_clusters[idx]]
@@ -80,6 +78,8 @@ if __name__ == "__main__":
         covs = np.ones(math.floor(sample_frac*n)) * 3
         loads = np.ones(math.floor(sample_frac*m)) * 6
 
+        m, n = math.floor(sample_frac*m), math.floor(sample_frac*n)
+
         # covs = np.ones(n) * 3
         # loads = np.ones(m) * 6
 
@@ -108,6 +108,7 @@ if __name__ == "__main__":
 
         elif algo == "GESW":
             print("Solving for max GESW", flush=True)
+            print(group_labels)
             est_usw, alloc = solve_gesw_gurobi(means, covs, loads, group_labels)
             np.save(os.path.join(data_dir, "outputs", "gesw_alloc_iclr_%d.npy" % year), alloc)
 

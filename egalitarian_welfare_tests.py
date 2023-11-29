@@ -31,7 +31,6 @@ def remap(group_labels):
         while idx + ctr < i:
             label_map[idx + ctr] = ctr
             ctr += 1
-    label_map[max_group_label] = ctr
 
     final_clusters = deepcopy(group_labels)
     for idx in range(final_clusters.shape[0]):

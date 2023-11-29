@@ -1,6 +1,8 @@
 import pickle
 import math
 
+from copy import deepcopy
+
 from solve_gesw import solve_gesw_gurobi
 from solve_usw import solve_usw_gurobi
 from solve_max_min import solve_max_min, solve_max_min_alt
@@ -17,6 +19,21 @@ def parse_args():
     parser.add_argument("--algo", type=str)
 
     return parser.parse_args()
+
+
+def remap(group_labels):
+    label_map = {}
+    max_group_label = int(np.max(group_labels))
+    sorted_bad = sorted(set(range(max_group_label+1)) - set(group_labels.tolist()))
+    ctr = 0
+    for idx, i in enumerate(sorted_bad):
+        while idx + ctr < i:
+            label_map[idx + ctr] = ctr
+            ctr += 1
+    final_clusters = deepcopy(group_labels)
+    for idx in range(final_clusters.shape[0]):
+        final_clusters[idx] = label_map[final_clusters[idx]]
+    return final_clusters
 
 
 def gesw(group_labels, alloc, scores):
@@ -52,9 +69,9 @@ if __name__ == "__main__":
         sampled_revs = np.random.choice(range(m), math.floor(sample_frac*m))
         sampled_paps = np.random.choice(range(n), math.floor(sample_frac*n))
 
+        group_labels = remap(group_labels[sampled_paps])
         std_devs = std_devs[sampled_revs, :][:, sampled_paps]
         means = means[sampled_revs, :][:, sampled_paps]
-
         covs = np.ones(math.floor(sample_frac*n)) * 3
         loads = np.ones(math.floor(sample_frac*m)) * 6
 

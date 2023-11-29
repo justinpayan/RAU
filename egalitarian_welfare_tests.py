@@ -5,7 +5,7 @@ from copy import deepcopy
 
 from solve_gesw import solve_gesw_gurobi
 from solve_usw import solve_usw_gurobi
-from solve_max_min import solve_max_min, solve_max_min_alt
+from solve_max_min import solve_max_min, solve_max_min_alt, solve_max_min_gesw
 from utils import *
 import time
 import argparse
@@ -45,7 +45,7 @@ def gesw(group_labels, alloc, scores):
         idxs = np.where(group_labels == i)[0]
         sub_alloc = alloc[:, idxs]
         sub_scores = scores[:, idxs]
-        gusws.append(np.sum(sub_alloc * sub_scores)/idxs.shape[0])
+        gusws.append(np.sum(sub_alloc * sub_scores) / idxs.shape[0])
     return min(gusws)
 
 
@@ -69,8 +69,8 @@ if __name__ == "__main__":
     m, n = means.shape
     sample_frac = .05
     np.random.seed(1)
-    sampled_revs = np.random.choice(range(m), math.floor(sample_frac*m))
-    sampled_paps = np.random.choice(range(n), math.floor(sample_frac*n))
+    sampled_revs = np.random.choice(range(m), math.floor(sample_frac * m))
+    sampled_paps = np.random.choice(range(n), math.floor(sample_frac * n))
 
     print(sampled_revs)
     print(sampled_paps)
@@ -78,10 +78,10 @@ if __name__ == "__main__":
     group_labels = remap(group_labels[sampled_paps])
     std_devs = std_devs[sampled_revs, :][:, sampled_paps]
     means = means[sampled_revs, :][:, sampled_paps]
-    covs = np.ones(math.floor(sample_frac*n)) * 3
-    loads = np.ones(math.floor(sample_frac*m)) * 6
+    covs = np.ones(math.floor(sample_frac * n)) * 3
+    loads = np.ones(math.floor(sample_frac * m)) * 6
 
-    m, n = math.floor(sample_frac*m), math.floor(sample_frac*n)
+    m, n = math.floor(sample_frac * m), math.floor(sample_frac * n)
 
     # covs = np.ones(n) * 3
     # loads = np.ones(m) * 6
@@ -117,7 +117,8 @@ if __name__ == "__main__":
 
     elif algo == "RRA":
         print("Solving for max robust USW using Elitas RRA", flush=True)
-        fractional_alloc_max_min = solve_max_min_alt(means, covs, loads, std_devs, integer=False, rsquared=None, check=False)
+        fractional_alloc_max_min = solve_max_min_alt(means, covs, loads, std_devs, integer=False, rsquared=None,
+                                                     check=False)
         np.save(os.path.join(data_dir, "outputs", "rra_frac_alloc_iclr_%d.npy" % year), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
@@ -125,11 +126,21 @@ if __name__ == "__main__":
 
     elif algo == "RRA_ORIG":
         print("Solving for max robust USW using the original RRA formulation", flush=True)
-        fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, caching=True, dykstra=True, run_name=run_name)
+        fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, caching=True,
+                                                 dykstra=True, run_name=run_name)
         np.save(os.path.join(data_dir, "outputs", "rra_orig_frac_alloc_iclr_%d.npy" % year), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
         np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_iclr_%d.npy" % year), alloc)
+    elif algo == "RRA_GESW":
+        print("Solving for max robust GESW using the original RRA formulation", flush=True)
+        fractional_alloc_max_min = solve_max_min_gesw(means, covs, loads, std_devs, group_labels,
+                                                      noise_model=noise_model,
+                                                      dykstra=True, run_name=run_name)
+        np.save(os.path.join(data_dir, "outputs", "rra_gesw_frac_alloc_iclr_%d.npy" % year), fractional_alloc_max_min)
+        alloc = bvn(fractional_alloc_max_min, run_name)
+        est_usw = np.sum(alloc * means)
+        np.save(os.path.join(data_dir, "outputs", "rra_gesw_alloc_iclr_%d.npy" % year), alloc)
 
     print("Solver took %s secs" % (time.time() - st))
 
@@ -159,7 +170,7 @@ if __name__ == "__main__":
         true_scores = np.load(os.path.join(data_dir, "data", "iclr", "outcomes_%d_%d.npy" % (year, i)))
         true_scores = true_scores[sampled_revs, :][:, sampled_paps]
 
-        true_usws.append(np.sum(alloc * true_scores)/n)
+        true_usws.append(np.sum(alloc * true_scores) / n)
         true_gesws.append(gesw(group_labels, alloc, true_scores))
 
     stat_dict = {}
@@ -168,8 +179,8 @@ if __name__ == "__main__":
     # print("Optimal USW: %.2f" % opt)
     # stat_dict['opt_usw'] = opt
     print("\n")
-    print("Estimated USW: %.2f" % (est_usw/n))
-    stat_dict['est_usw'] = est_usw/n
+    print("Estimated USW: %.2f" % (est_usw / n))
+    stat_dict['est_usw'] = est_usw / n
     print("True USW: %.2f \\pm %.2f" % (np.mean(true_usws), np.std(true_usws)))
     stat_dict['true_usw'] = np.mean(true_usws)
 

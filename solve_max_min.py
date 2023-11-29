@@ -7,6 +7,7 @@ import uuid
 from scipy.stats.distributions import chi2
 
 from solve_usw import solve_usw_gurobi
+from solve_gesw import solve_gesw_gurobi
 
 import gurobipy as gp
 
@@ -344,6 +345,176 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         final_alloc = x.value
     else:
         final_alloc = project_to_feasible_exact(global_opt_alloc, covs, loads, init_guess=old_alloc)
+    proj_times.append(time.time() - st)
+
+    print("Adv times: ", adv_times)
+    print("Proj times: ", proj_times)
+
+    return final_alloc
+
+
+# Consider the tpms matrix as the center point, and then we assume
+# that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
+# out the maximin assignment where we worst-case over the true scores within "error_bound" of
+# the tpms scores.
+def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False, noise_model="ball", run_name="default"):
+    assert noise_model in ["ball", "ellipse"]
+
+    st = time.time()
+    print("Solving for initial max GESW alloc", flush=True)
+    _, alloc = solve_gesw_gurobi(tpms, covs, loads, group_labels)
+    # alloc = np.random.randn(tpms.shape[0], tpms.shape[1])
+    # alloc = np.clip(alloc, 0, 1)
+    # alloc = project_to_feasible(alloc, covs, loads)
+
+    global_opt_obj = 0.0
+    global_opt_alloc = alloc.copy()
+
+    print("Solving GESW max min: %s elapsed" % (time.time() - st), flush=True)
+
+    converged = False
+    max_iter = 30
+
+    # Init params for grad asc
+
+    # For adagrad
+    # cache = np.zeros(tpms.shape)
+    # lr = .01
+    # eps = 1e-4
+
+    # For vanilla
+    t = 0
+    lr = 1
+    steps_no_imp = 0
+
+    adv_times = []
+    proj_times = []
+
+    def select_group(matrix, gls, group_id):
+        return matrix[:, np.where(gls == group_id)]
+
+    # Have an adversarial problem for each group
+    n_groups = int(np.max(group_labels)) + 1
+    adv_probs = []
+
+    group_sizes = []
+    for group_id in range(n_groups):
+        group_sizes.append(len(np.where(group_labels == group_id)[0]))
+
+    alloc_param = cp.Parameter(tpms.shape)
+    u = cp.Variable(tpms.shape)
+
+    for group_id in range(n_groups):
+        tpms_grp = select_group(tpms, group_labels, group_id)
+        std_devs_grp = select_group(std_devs, group_labels, group_id)
+        u_grp = select_group(u, group_labels, group_id)
+        alloc_grp = select_group(alloc_param, group_labels, group_id)
+
+        soc_constraint = [
+            cp.SOC(np.sqrt(chi2.ppf(.95, tpms.size)), cp.reshape(cp.multiply(u_grp - tpms_grp, 1 / std_devs_grp), (tpms_grp.shape[0]*tpms_grp.shape[1])))]
+        adv_prob = cp.Problem(cp.Minimize(cp.sum(cp.multiply(alloc_grp, u_grp))),
+                              soc_constraint + [u_grp >= np.zeros(u_grp.shape), u_grp <= np.ones(u_grp.shape)])
+        adv_probs.append(adv_prob)
+        print("adv_prob is DPP? ", adv_prob.is_dcp(dpp=True))
+        print("adv_prob is DCP? ", adv_prob.is_dcp(dpp=False))
+
+    x = cp.Variable(tpms.shape)
+    m, n = tpms.shape
+    cost = cp.sum_squares(x - alloc_param)
+    n_vec = np.ones((n, 1))
+    m_vec = np.ones((m, 1))
+    constraints = [x @ n_vec <= loads.reshape((m, 1)),
+                   x.T @ m_vec == covs.reshape((n, 1)),
+                   x >= np.zeros(x.shape),
+                   x <= np.ones(x.shape)]
+    proj_prob = cp.Problem(cp.Minimize(cost), constraints)
+
+    print("proj_prob is DPP? ", proj_prob.is_dcp(dpp=True))
+    print("proj_prob is DCP? ", proj_prob.is_dcp(dpp=False))
+
+    worst_s_over_groups = tpms.copy()
+
+    while not converged and t < max_iter:
+        # Compute the worst-case S matrix using second order cone programming
+        print("Computing worst case S matrix")
+        print("%s elapsed" % (time.time() - st), flush=True)
+
+        st = time.time()
+
+        alloc_param.value = alloc
+
+        worst_obj = np.inf
+        worst_s_over_groups = None
+        worst_group_id = 0
+
+        for group_id, adv_prob in enumerate(adv_probs):
+            adv_prob.solve(warm_start=True)
+            worst_s = u.value
+            obj_value = np.sum(select_group(worst_s * alloc, group_labels, group_id))/group_sizes[group_id]
+            if obj_value < worst_obj:
+                worst_obj = obj_value
+                worst_s_over_groups = worst_s
+                worst_group_id = group_id
+
+        adv_times.append(time.time() - st)
+
+        print("group realizing worst case: ", worst_group_id)
+
+        # Update the allocation
+        # 1, compute the gradient (I think it's just the value of the worst s, but check to be sure).
+        # 2, update using the rate parameter times the gradient.
+        # 3, project to the set of allocations that meet all the hard constraints
+
+        old_alloc = alloc.copy()
+
+        alloc_grad = np.zeros(tpms.shape)
+        alloc_grad[:, np.where(group_labels == worst_group_id)] = select_group(worst_s_over_groups, group_labels, worst_group_id)
+
+        # vanilla update
+        if t % 10 == 0:
+            lr /= 2
+        alloc = alloc + lr * alloc_grad
+
+        # Project to the set of feasible allocations
+        print("Projecting to feasible set: %s elapsed" % (time.time() - st), flush=True)
+        st = time.time()
+        if dykstra:
+            alloc = project_to_feasible(alloc, covs, loads, max_iter=1000)
+        else:
+            alloc_param.value = alloc
+            proj_prob.solve(warm_start=True)
+            # alloc = x.value.reshape(tpms.shape)
+            alloc = x.value
+
+        proj_times.append(time.time() - st)
+
+        # Check for convergence, update t
+        # update_amt = np.linalg.norm(alloc - old_alloc)
+        # converged = np.isclose(0, update_amt, atol=1e-6)
+        t += 1
+
+        if worst_obj > global_opt_obj:
+            global_opt_obj = worst_obj
+            global_opt_alloc = old_alloc
+            steps_no_imp = 0
+            print("Also saving out this allocation")
+            np.save(os.path.join("/mnt/nfs/scratch1/jpayan/RAU/outputs", "global_opt_alloc_%d_%d.npy" % (run_name, t)),
+                    global_opt_alloc)
+        else:
+            steps_no_imp += 1
+
+        if steps_no_imp > 10:
+            return global_opt_alloc
+
+        if t % 1 == 0:
+            print("Step %d" % t)
+            print("Obj value: ", worst_obj)
+            print("%s elapsed" % (time.time() - st), flush=True)
+
+    st = time.time()
+    alloc_param.value = global_opt_alloc
+    proj_prob.solve(warm_start=True)
+    final_alloc = x.value
     proj_times.append(time.time() - st)
 
     print("Adv times: ", adv_times)

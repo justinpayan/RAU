@@ -107,6 +107,7 @@ if __name__ == "__main__":
     # np.save(os.path.join(data_dir, "outputs", "max_min_alloc_iclr_%d_%d.npy" % (year, seed)), alloc_max_min)
 
     # Run the baseline, which is just TPMS
+    tol = .05
     st = time.time()
     if algo == "LP":
         print("Solving for max USW", flush=True)
@@ -131,7 +132,7 @@ if __name__ == "__main__":
     elif algo == "RRA_ORIG":
         print("Solving for max robust USW using the original RRA formulation", flush=True)
         fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, caching=True,
-                                                 dykstra=True, run_name=run_name)
+                                                 dykstra=True, run_name=run_name, tol=tol)
         np.save(os.path.join(data_dir, "outputs", "rra_orig_frac_alloc_iclr_trunc_%d.npy" % year), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
@@ -141,7 +142,7 @@ if __name__ == "__main__":
         print("Solving for max robust GESW using the original RRA formulation", flush=True)
         fractional_alloc_max_min = solve_max_min_gesw(means, covs, loads, std_devs, group_labels,
                                                       noise_model=noise_model,
-                                                      dykstra=True, run_name=run_name)
+                                                      dykstra=True, run_name=run_name, tol=tol)
         np.save(os.path.join(data_dir, "outputs", "rra_gesw_frac_alloc_iclr_trunc_%d.npy" % year), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)

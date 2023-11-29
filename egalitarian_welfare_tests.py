@@ -72,6 +72,9 @@ if __name__ == "__main__":
     sampled_revs = np.random.choice(range(m), math.floor(sample_frac*m))
     sampled_paps = np.random.choice(range(n), math.floor(sample_frac*n))
 
+    print(sampled_revs)
+    print(sampled_paps)
+
     group_labels = remap(group_labels[sampled_paps])
     std_devs = std_devs[sampled_revs, :][:, sampled_paps]
     means = means[sampled_revs, :][:, sampled_paps]

@@ -387,7 +387,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
     lr = 1
     steps_no_imp = 0
     wait_steps = 50
-    lr_schedule = 20
+    lr_schedule = 10
 
     adv_times = []
     proj_times = []
@@ -473,8 +473,8 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
         alloc_grad[:, np.where(group_labels == worst_group_id)[0]] = select_group(worst_s_over_groups, group_labels, worst_group_id)
 
         # vanilla update
-        if t % lr_schedule == 0:
-            lr /= 2
+        # if t % lr_schedule == 0:
+        #     lr /= 2
         alloc = alloc + lr * alloc_grad
 
         # Project to the set of feasible allocations
@@ -505,8 +505,10 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
         else:
             steps_no_imp += 1
 
-        if steps_no_imp > wait_steps:
-            return global_opt_alloc
+        if steps_no_imp > lr_schedule:
+            steps_no_imp = 0
+            lr /= 2
+            # return global_opt_alloc
 
         if t % 1 == 0:
             print("Step %d" % t)

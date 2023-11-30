@@ -107,7 +107,7 @@ if __name__ == "__main__":
     # np.save(os.path.join(data_dir, "outputs", "max_min_alloc_iclr_%d_%d.npy" % (year, seed)), alloc_max_min)
 
     # Run the baseline, which is just TPMS
-    tol = .05
+    tol = .00005
     max_iter = 200
     st = time.time()
     if algo == "LP":
@@ -143,7 +143,7 @@ if __name__ == "__main__":
         print("Solving for max robust GESW using the original RRA formulation", flush=True)
         fractional_alloc_max_min = solve_max_min_gesw(means, covs, loads, std_devs, group_labels,
                                                       noise_model=noise_model,
-                                                      dykstra=True, run_name=run_name, tol=tol, max_iter=max_iter*20)
+                                                      dykstra=True, run_name=run_name, tol=tol, max_iter=max_iter*10)
         np.save(os.path.join(data_dir, "outputs", "rra_gesw_frac_alloc_iclr_trunc_%d.npy" % year), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)

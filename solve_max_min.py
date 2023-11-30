@@ -386,6 +386,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
     t = 0
     lr = 1
     steps_no_imp = 0
+    wait_steps = 50
 
     adv_times = []
     proj_times = []
@@ -503,7 +504,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
         else:
             steps_no_imp += 1
 
-        if steps_no_imp > 10:
+        if steps_no_imp > wait_steps:
             return global_opt_alloc
 
         if t % 1 == 0:

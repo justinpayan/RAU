@@ -387,6 +387,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
     lr = 1
     steps_no_imp = 0
     wait_steps = 50
+    lr_schedule = 20
 
     adv_times = []
     proj_times = []
@@ -472,7 +473,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
         alloc_grad[:, np.where(group_labels == worst_group_id)[0]] = select_group(worst_s_over_groups, group_labels, worst_group_id)
 
         # vanilla update
-        if t % 10 == 0:
+        if t % lr_schedule == 0:
             lr /= 2
         alloc = alloc + lr * alloc_grad
 

@@ -143,7 +143,7 @@ if __name__ == "__main__":
         print("Solving for max robust GESW using the original RRA formulation", flush=True)
         fractional_alloc_max_min = solve_max_min_gesw(means, covs, loads, std_devs, group_labels,
                                                       noise_model=noise_model,
-                                                      dykstra=True, run_name=run_name, tol=tol, max_iter=max_iter)
+                                                      dykstra=True, run_name=run_name, tol=tol, max_iter=max_iter*20)
         np.save(os.path.join(data_dir, "outputs", "rra_gesw_frac_alloc_iclr_trunc_%d.npy" % year), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)

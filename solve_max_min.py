@@ -203,7 +203,7 @@ def project_to_integer(alloc, covs, loads, use_verbose=False):
 # that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
 # out the maximin assignment where we worst-case over the true scores within "error_bound" of
 # the tpms scores.
-def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noise_model="ball", run_name="default", tol=.2, max_iter=30):
+def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noise_model="ball", run_name="default", r=0.0, max_iter=30):
     assert noise_model in ["ball", "ellipse"]
 
     st = time.time()
@@ -236,8 +236,10 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
     proj_times = []
 
     u = cp.Variable(tpms.shape)
+    # soc_constraint = [
+    #     cp.SOC(np.sqrt(chi2.ppf(tol, alloc.size)), cp.reshape(cp.multiply(u - tpms, 1 / std_devs), (tpms.shape[0]*tpms.shape[1])))]
     soc_constraint = [
-        cp.SOC(np.sqrt(chi2.ppf(tol, alloc.size)), cp.reshape(cp.multiply(u - tpms, 1 / std_devs), (tpms.shape[0]*tpms.shape[1])))]
+        cp.SOC(np.sqrt(r), cp.reshape(cp.multiply(u - tpms, 1 / std_devs), (tpms.shape[0]*tpms.shape[1])))]
     alloc_param = cp.Parameter(alloc.shape)
     # adv_prob = cp.Problem(cp.Minimize(alloc_param.T @ u),
     #                       soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
@@ -356,7 +358,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
 # that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
 # out the maximin assignment where we worst-case over the true scores within "error_bound" of
 # the tpms scores.
-def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False, noise_model="ball", run_name="default", tol=.2, max_iter=30):
+def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False, noise_model="ball", run_name="default", r=0.0, max_iter=30):
     assert noise_model in ["ball", "ellipse"]
 
     print("group_labels: ", group_labels)
@@ -386,7 +388,6 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
     t = 0
     lr = 1
     steps_no_imp = 0
-    wait_steps = 50
     lr_schedule = 10
 
     adv_times = []
@@ -413,7 +414,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
         alloc_grp = select_group(alloc_param, group_labels, group_id)
 
         soc_constraint = [
-            cp.SOC(np.sqrt(chi2.ppf(tol, tpms_grp.size)), cp.reshape(cp.multiply(u_grp - tpms_grp, 1 / std_devs_grp), (tpms_grp.shape[0]*tpms_grp.shape[1])))]
+            cp.SOC(np.sqrt(r), cp.reshape(cp.multiply(u_grp - tpms_grp, 1 / std_devs_grp), (tpms_grp.shape[0]*tpms_grp.shape[1])))]
         adv_prob = cp.Problem(cp.Minimize(cp.sum(cp.multiply(alloc_grp, u_grp))),
                               soc_constraint + [u_grp >= np.zeros(u_grp.shape), u_grp <= np.ones(u_grp.shape)])
         adv_probs.append(adv_prob)
@@ -500,7 +501,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
             global_opt_alloc = old_alloc
             steps_no_imp = 0
             print("Also saving out this allocation")
-            np.save(os.path.join("/mnt/nfs/scratch1/jpayan/RAU/outputs", "global_opt_alloc_%d_%d.npy" % (run_name, t)),
+            np.save(os.path.join("/mnt/nfs/scratch1/jpayan/RAU/outputs", "global_opt_alloc_%s_%d.npy" % (run_name, t)),
                     global_opt_alloc)
         else:
             steps_no_imp += 1

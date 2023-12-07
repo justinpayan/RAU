@@ -17,6 +17,7 @@ def parse_args():
     parser.add_argument("--seed", type=int)
     parser.add_argument("--year", type=int)
     parser.add_argument("--algo", type=str)
+    parser.add_argument("--r_idx", type=int)
 
     return parser.parse_args()
 
@@ -54,18 +55,24 @@ if __name__ == "__main__":
     data_dir = args.data_dir
     year = args.year
     algo = args.algo
+    r_idx = args.r_idx
 
     noise_model = "ellipse"
 
-    fname = "stat_dict_iclr_trunc_%d_%s.pkl" % (year, algo)
+    fname = "stat_dict_iclr_trunc_new_%d_%s.pkl" % (year, algo)
     # if not os.path.isfile(os.path.join(data_dir, "outputs", fname)):
     # Load in the ellipse
     # std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))
     # means = np.load(os.path.join(data_dir, "data", "iclr", "scores_mu_iclr_%d.npy" % year))
 
     std_devs = np.load(os.path.join(data_dir, "data", "iclr", "sigma_trunc_%d.npy" % year))
-    means = np.load(os.path.join(data_dir, "data", "iclr", "mu_trunc_%d.npy" % year))
+    # means = np.load(os.path.join(data_dir, "data", "iclr", "mu_trunc_%d.npy" % year))
+    means = np.load(os.path.join(data_dir, "data", "iclr", "mu_hat_%d.npy" % year))
     group_labels = np.load(os.path.join(data_dir, "data", "iclr", "group_labels_trunc_%d.npy" % year))
+    r_values = np.load(os.path.join(data_dir, "data", "iclr", "r_vals_%d.npy" % year))
+    r = r_values[r_idx]
+    delta_values = np.load(os.path.join(data_dir, "data", "iclr", "delta_vals.npy"))
+    print("delta = %.4f, r = %.4f" % (delta_values[r_idx], r))
 
     # group_labels = np.load(os.path.join(data_dir, "data", "iclr", "group_ids_%d.npy" % year))
 
@@ -107,47 +114,46 @@ if __name__ == "__main__":
     # np.save(os.path.join(data_dir, "outputs", "max_min_alloc_iclr_%d_%d.npy" % (year, seed)), alloc_max_min)
 
     # Run the baseline, which is just TPMS
-    tol = .00005
-    max_iter = 200
+    max_iter = 50
     st = time.time()
     if algo == "LP":
         print("Solving for max USW", flush=True)
         est_usw, alloc = solve_usw_gurobi(means, covs, loads)
-        np.save(os.path.join(data_dir, "outputs", "tpms_alloc_iclr_trunc_%d.npy" % year), alloc)
+        np.save(os.path.join(data_dir, "outputs", "tpms_alloc_iclr_new_trunc_%d.npy" % year), alloc)
 
     elif algo == "GESW":
         print("Solving for max GESW", flush=True)
         print(group_labels)
         est_usw, alloc = solve_gesw_gurobi(means, covs, loads, group_labels)
-        np.save(os.path.join(data_dir, "outputs", "gesw_alloc_iclr_trunc_%d.npy" % year), alloc)
+        np.save(os.path.join(data_dir, "outputs", "gesw_alloc_iclr_new_trunc_%d.npy" % year), alloc)
 
     elif algo == "RRA":
         print("Solving for max robust USW using Elitas RRA", flush=True)
         fractional_alloc_max_min = solve_max_min_alt(means, covs, loads, std_devs, integer=False, rsquared=None,
                                                      check=False)
-        np.save(os.path.join(data_dir, "outputs", "rra_frac_alloc_iclr_trunc_%d.npy" % year), fractional_alloc_max_min)
+        np.save(os.path.join(data_dir, "outputs", "rra_frac_alloc_iclr_new_trunc_%d.npy" % year), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
-        np.save(os.path.join(data_dir, "outputs", "rra_alloc_iclr_trunc_%d.npy" % year), alloc)
+        np.save(os.path.join(data_dir, "outputs", "rra_alloc_iclr_new_trunc_%d.npy" % year), alloc)
 
     elif algo == "RRA_ORIG":
-        print("Solving for max robust USW using the original RRA formulation", flush=True)
+        print("Solving for max robust USW using the original RRA formulation with r=%d" % r, flush=True)
         fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, caching=True,
-                                                 dykstra=True, run_name=run_name, tol=tol, max_iter=max_iter)
-        np.save(os.path.join(data_dir, "outputs", "rra_orig_frac_alloc_iclr_trunc_%d.npy" % year), fractional_alloc_max_min)
+                                                 dykstra=True, run_name=run_name, r=r, max_iter=max_iter)
+        np.save(os.path.join(data_dir, "outputs", "rra_orig_frac_alloc_iclr_new_trunc_%.4f_%d.npy" % (r, year)), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
-        np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_iclr_trunc_%d.npy" % year), alloc)
+        np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_iclr_new_trunc_%.4f_%d.npy" % (r, year)), alloc)
 
     elif algo == "RRA_GESW":
-        print("Solving for max robust GESW using the original RRA formulation", flush=True)
+        print("Solving for max robust GESW using the original RRA formulation with r=%d" % r, flush=True)
         fractional_alloc_max_min = solve_max_min_gesw(means, covs, loads, std_devs, group_labels,
                                                       noise_model=noise_model,
-                                                      dykstra=True, run_name=run_name, tol=tol, max_iter=max_iter*10)
-        np.save(os.path.join(data_dir, "outputs", "rra_gesw_frac_alloc_iclr_trunc_%d.npy" % year), fractional_alloc_max_min)
+                                                      dykstra=True, run_name=run_name, r=r, max_iter=max_iter*10)
+        np.save(os.path.join(data_dir, "outputs", "rra_gesw_frac_alloc_iclr_new_trunc_%.4f_%d.npy" % (r, year)), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
-        np.save(os.path.join(data_dir, "outputs", "rra_gesw_alloc_iclr_trunc_%d.npy" % year), alloc)
+        np.save(os.path.join(data_dir, "outputs", "rra_gesw_alloc_iclr_trunc_%.4f_%d.npy" % (r, year)), alloc)
 
     print("Solver took %s secs" % (time.time() - st))
 
@@ -173,14 +179,18 @@ if __name__ == "__main__":
 
     true_usws = []
     true_gesws = []
-    for i in range(100):
-        true_scores = np.load(os.path.join(data_dir, "data", "iclr", "outcomes_trunc_%d_%d.npy" % (year, i)))
-        # true_scores = true_scores[sampled_revs, :][:, sampled_paps]
 
+    with open(os.path.join(data_dir, "data", "iclr", "test_set_%d.pkl" % year), 'rb') as f:
+        test_set = pickle.load(f)
+
+    # for i in range(100):
+    #     true_scores = np.load(os.path.join(data_dir, "data", "iclr", "outcomes_trunc_%d_%d.npy" % (year, i)))
+        # true_scores = true_scores[sampled_revs, :][:, sampled_paps]
+    for true_scores in test_set:
         true_usws.append(np.sum(alloc * true_scores) / n)
         true_gesws.append(gesw(group_labels, alloc, true_scores))
 
-    stat_dict = {}
+    stat_dict = {'true_usws_full': true_usws, 'true_gesws_full': true_gesws}
     print("\n*******************\n*******************\n*******************\n")
     print("Stats for ICLR %d with algo %s" % (year, algo))
     # print("Optimal USW: %.2f" % opt)

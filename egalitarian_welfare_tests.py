@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     noise_model = "ellipse"
 
-    fname = "stat_dict_iclr_trunc_new_%d_%s.pkl" % (year, algo)
+    fname = "stat_dict_iclr_trunc_new_%d_%d_%s.pkl" % (year, r_idx, algo)
     # if not os.path.isfile(os.path.join(data_dir, "outputs", fname)):
     # Load in the ellipse
     # std_devs = np.load(os.path.join(data_dir, "data", "iclr", "scores_sigma_iclr_%d.npy" % year))

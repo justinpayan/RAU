@@ -72,7 +72,7 @@ if __name__ == "__main__":
     r_values = np.load(os.path.join(data_dir, "data", "iclr", "r_vals_%d.npy" % year))
     r = r_values[r_idx]
     delta_values = np.load(os.path.join(data_dir, "data", "iclr", "delta_vals.npy"))
-    print("delta = %.4f, r = %.4f" % (delta_values[r_idx], r))
+    print("delta = %.4f, r_idx = %d, r = %.4f" % (delta_values[r_idx], r_idx, r))
 
     # group_labels = np.load(os.path.join(data_dir, "data", "iclr", "group_ids_%d.npy" % year))
 
@@ -140,20 +140,20 @@ if __name__ == "__main__":
         print("Solving for max robust USW using the original RRA formulation with r=%d" % r, flush=True)
         fractional_alloc_max_min = solve_max_min(means, covs, loads, std_devs, noise_model=noise_model, caching=True,
                                                  dykstra=True, run_name=run_name, r=r, max_iter=max_iter)
-        np.save(os.path.join(data_dir, "outputs", "rra_orig_frac_alloc_iclr_new_trunc_%.4f_%d.npy" % (r, year)), fractional_alloc_max_min)
+        np.save(os.path.join(data_dir, "outputs", "rra_orig_frac_alloc_iclr_new_trunc_%d_%d.npy" % (r_idx, year)), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
-        np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_iclr_new_trunc_%.4f_%d.npy" % (r, year)), alloc)
+        np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_iclr_new_trunc_%d_%d.npy" % (r_idx, year)), alloc)
 
     elif algo == "RRA_GESW":
         print("Solving for max robust GESW using the original RRA formulation with r=%d" % r, flush=True)
         fractional_alloc_max_min = solve_max_min_gesw(means, covs, loads, std_devs, group_labels,
                                                       noise_model=noise_model,
                                                       dykstra=True, run_name=run_name, r=r, max_iter=max_iter*10)
-        np.save(os.path.join(data_dir, "outputs", "rra_gesw_frac_alloc_iclr_new_trunc_%.4f_%d.npy" % (r, year)), fractional_alloc_max_min)
+        np.save(os.path.join(data_dir, "outputs", "rra_gesw_frac_alloc_iclr_new_trunc_%d_%d.npy" % (r_idx, year)), fractional_alloc_max_min)
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
-        np.save(os.path.join(data_dir, "outputs", "rra_gesw_alloc_iclr_trunc_%.4f_%d.npy" % (r, year)), alloc)
+        np.save(os.path.join(data_dir, "outputs", "rra_gesw_alloc_iclr_trunc_%d_%d.npy" % (r_idx, year)), alloc)
 
     print("Solver took %s secs" % (time.time() - st))
 

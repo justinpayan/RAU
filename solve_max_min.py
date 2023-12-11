@@ -199,6 +199,61 @@ def project_to_integer(alloc, covs, loads, use_verbose=False):
     return x.value
 
 
+def get_worst_case_usw_standalone(alloc, tpms, std_devs, r):
+    u = cp.Variable(tpms.shape)
+
+    soc_constraint = [
+        cp.SOC(np.sqrt(r), cp.reshape(cp.multiply(u - tpms, 1 / std_devs), (tpms.shape[0] * tpms.shape[1])))]
+    alloc_param = cp.Parameter(alloc.shape)
+    alloc_param.value = alloc
+
+    adv_prob = cp.Problem(cp.Minimize(cp.sum(cp.multiply(alloc_param, u))),
+                          soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
+    adv_prob.solve()
+    worst_s = u.value
+
+    return np.sum(worst_s * alloc)
+
+
+def get_worst_case_gesw_standalone(alloc, tpms, std_devs, r, group_labels):
+    def select_group(matrix, gls, group_id):
+        return matrix[:, np.where(gls == group_id)[0]]
+
+    # Have an adversarial problem for each group
+    n_groups = int(np.max(group_labels)) + 1
+    adv_probs = []
+
+    group_sizes = []
+    for group_id in range(n_groups):
+        group_sizes.append(len(np.where(group_labels == group_id)[0]))
+
+    alloc_param = cp.Parameter(tpms.shape)
+    u = cp.Variable(tpms.shape)
+
+    for group_id in range(n_groups):
+        tpms_grp = select_group(tpms, group_labels, group_id)
+        std_devs_grp = select_group(std_devs, group_labels, group_id)
+        u_grp = select_group(u, group_labels, group_id)
+        alloc_grp = select_group(alloc_param, group_labels, group_id)
+
+        soc_constraint = [
+            cp.SOC(np.sqrt(r), cp.reshape(cp.multiply(u_grp - tpms_grp, 1 / std_devs_grp), (tpms_grp.shape[0]*tpms_grp.shape[1])))]
+        adv_prob = cp.Problem(cp.Minimize(cp.sum(cp.multiply(alloc_grp, u_grp))),
+                              soc_constraint + [u_grp >= np.zeros(u_grp.shape), u_grp <= np.ones(u_grp.shape)])
+        adv_probs.append(adv_prob)
+
+    worst_obj = np.inf
+
+    for group_id, adv_prob in enumerate(adv_probs):
+        adv_prob.solve()
+        worst_s = u.value
+        obj_value = np.sum(select_group(worst_s * alloc, group_labels, group_id)) / group_sizes[group_id]
+        if obj_value < worst_obj:
+            worst_obj = obj_value
+
+    return worst_obj
+
+
 # Consider the tpms matrix as the center point, and then we assume
 # that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
 # out the maximin assignment where we worst-case over the true scores within "error_bound" of

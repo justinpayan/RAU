@@ -882,7 +882,8 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     obj -= lam * r
 
     prob = cp.Problem(cp.Maximize(obj), constraints)
-    prob.solve()
+    print(prob.is_dqcp())
+    prob.solve(qcp=True)
 
     return alloc.value
 

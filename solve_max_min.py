@@ -866,7 +866,7 @@ def softtime(model, where):
 def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     alloc = cp.Variable(tpms.shape, nonneg=True)
     beta = cp.Variable(tpms.shape, pos=True)
-    lam = cp.Variable(1, pos=True)
+    loglam = cp.Variable(1)
 
     constraints = [alloc <= 1,
                    cp.sum(alloc, axis=0) == covs, cp.sum(alloc, axis=1) <= loads]
@@ -877,11 +877,13 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     middle = cp.quad_form((alloc-beta).flatten(), cov_mat)/4
     print("middle is concave: ", (-1*middle).is_concave())
     print("obj is concave: ", obj.is_concave())
-    obj -= middle / lam
+    obj -= middle / cp.exp(loglam)
     print("obj is concave: ", obj.is_concave())
     print("obj is quasiconcave: ", obj.is_quasiconcave())
 
-    obj -= lam * r
+    obj -= np.exp(loglam) * r
+    print("obj is concave: ", obj.is_concave())
+    print("obj is quasiconcave: ", obj.is_quasiconcave())
 
     prob = cp.Problem(cp.Maximize(obj), constraints)
     print(prob.is_dqcp())

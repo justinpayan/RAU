@@ -875,7 +875,7 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     # middle = cp.multiply((alloc - beta)**2, (1/std_devs))
     print((alloc-beta).shape)
     print((1/std_devs).shape)
-    cov_mat = diags(1/std_devs)
+    cov_mat = diags(1/std_devs.flatten())
     obj -= cp.quad_form((alloc-beta).flatten(), cov_mat) / (4*lam)
     obj -= lam * r
 

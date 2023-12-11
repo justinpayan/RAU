@@ -868,9 +868,22 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     std_devs = np.array(std_devs)
     covs = np.array(covs)
     loads = np.array(loads)
-    n_reviewers = int(tpms.shape[0])
-    n_papers = int(tpms.shape[1])
 
+    alloc = cp.Variable(tpms.shape)
+    beta = cp.Variable(tpms.shape)
+    lam = cp.Variable(1)
+
+    constraints = [lam >= 0, beta >= 0, alloc >= 0, alloc <= 1,
+                   cp.sum(alloc, axis=0) == covs, cp.sum(alloc, axis=1) <= loads]
+
+    obj = cp.sum((alloc - beta)*tpms)
+    obj -= (alloc - beta)**2 * (1/std_devs) * (1/(4*lam))
+    obj -= lam * r
+
+    prob = cp.Problem(cp.Maximize(obj), constraints)
+    prob.solve()
+
+    return alloc.value
 
 
 def get_worst_case_alt(alloc, tpms, std_devs, noise_model="ball", rsquared=None, check=False):

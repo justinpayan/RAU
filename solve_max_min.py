@@ -876,8 +876,9 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     constraints = [lam >= 0, beta >= 0, alloc >= 0, alloc <= 1,
                    cp.sum(alloc, axis=0) == covs, cp.sum(alloc, axis=1) <= loads]
 
-    obj = cp.sum((alloc - beta)*tpms)
-    obj -= (alloc - beta)**2 * (1/std_devs) * (1/(4*lam))
+    obj = cp.sum(cp.multiply((alloc - beta), tpms))
+    middle = cp.multiply((alloc - beta)**2, (1/std_devs))
+    obj -= cp.sum(middle)/(4*lam)
     obj -= lam * r
 
     prob = cp.Problem(cp.Maximize(obj), constraints)

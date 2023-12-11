@@ -875,7 +875,7 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     # middle = cp.multiply((alloc - beta)**2, (1/std_devs))
     cov_mat = diags(1/std_devs.flatten())
     middle = cp.quad_form((alloc-beta).flatten(), cov_mat)
-    print("middle is concave: ", middle.is_concave())
+    print("middle is concave: ", (-1*middle).is_concave())
     obj -= middle / (4*lam)
     obj -= lam * r
 

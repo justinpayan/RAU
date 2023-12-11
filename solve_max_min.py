@@ -868,8 +868,6 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     beta = cp.Variable(tpms.shape, pos=True)
     lam = cp.Variable(1, pos=True)
 
-    # lam >= 0, beta >= 0, alloc >= 0,
-
     constraints = [alloc <= 1,
                    cp.sum(alloc, axis=0) == covs, cp.sum(alloc, axis=1) <= loads]
 
@@ -878,7 +876,11 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     cov_mat = diags(1/std_devs.flatten())
     middle = cp.quad_form((alloc-beta).flatten(), cov_mat)/4
     print("middle is concave: ", (-1*middle).is_concave())
+    print("obj is concave: ", obj.is_concave())
     obj -= middle / lam
+    print("obj is concave: ", obj.is_concave())
+    print("obj is quasiconcave: ", obj.is_quasiconcave())
+
     obj -= lam * r
 
     prob = cp.Problem(cp.Maximize(obj), constraints)

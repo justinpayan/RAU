@@ -5,6 +5,7 @@ import time
 import uuid
 
 from scipy.stats.distributions import chi2
+from scipy.sparse import diags
 
 from solve_usw import solve_usw_gurobi
 from solve_gesw import solve_gesw_gurobi
@@ -863,12 +864,6 @@ def softtime(model, where):
 
 
 def solve_max_min_alt(tpms, covs, loads, std_devs, r):
-
-    # tpms = tpms)
-    # std_devs
-    # covs = np.array(covs)
-    # loads = np.array(loads)
-
     alloc = cp.Variable(tpms.shape)
     beta = cp.Variable(tpms.shape)
     lam = cp.Variable(1)
@@ -880,7 +875,8 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     # middle = cp.multiply((alloc - beta)**2, (1/std_devs))
     print((alloc-beta).shape)
     print((1/std_devs).shape)
-    obj -= cp.quad_form(alloc-beta, 1/std_devs)/(4*lam)
+    cov_mat = diags(1/std_devs)
+    obj -= cp.quad_form((alloc-beta).flatten(), cov_mat) / (4*lam)
     obj -= lam * r
 
     prob = cp.Problem(cp.Maximize(obj), constraints)

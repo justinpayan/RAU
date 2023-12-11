@@ -243,6 +243,7 @@ def get_worst_case_gesw_standalone(alloc, tpms, std_devs, r, group_labels):
         adv_probs.append(adv_prob)
 
     worst_obj = np.inf
+    alloc_param.value = alloc
 
     for group_id, adv_prob in enumerate(adv_probs):
         adv_prob.solve()
@@ -681,119 +682,187 @@ def softtime(model, where):
             model.terminate()
 
 
-def solve_max_min_alt(tpms, covs, loads, std_devs, integer=True, rsquared=None, check=False):
-    """
-    :param tpms: 2d matrix of size #reviewers x #papers representing means
-    :param covs: 1d numpy array with length # papers representing no of reviews required per paper
-    :param loads: 1d numpy array with length # reviewers representing maximum no of papers per reviewer
-    :param std_devs: 2d matrix of size #reviewers x #papers representing std devs
-    :param noise_model: "ball" or "ellipse"
-    :param integer:
-    :return: 2d matrix #reviewers x #papers representing allocation and another 2d matrix #reviewers x #papers
-        representing affinite scores
-    """
-    # tpms = np.array(tpms)
-    # std_devs = np.array(std_devs)
-    # covs = np.array(covs)
-    # loads = np.array(loads)
-    # n_reviewers = tpms.shape[0]
-    # n_papers = tpms.shape[1]
-    # 
-    # assert (np.all(covs <= n_reviewers))
-    # 
-    # if rsquared is None:
-    #     rsquared = chi2.ppf(.95, tpms.size)
-    # 
-    # num = int(n_reviewers * n_papers)
-    # m = gp.Model()
-    # mu = tpms.flatten()
-    # var = (std_devs.flatten()) ** 2
-    # diag = var
-    # idiag = 1.0 / var
-    # 
-    # lamda = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "lamda")
-    # 
-    # beta = m.addMVar(num, lb=0, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="beta")
-    # 
-    # zeta = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "zeta")
-    # 
-    # lrs = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "lrs")
-    # 
-    # if integer == True:
-    #     alloc = m.addMVar(num, lb=0, ub=1, vtype=gp.GRB.INTEGER, name="alloc")
-    # else:
-    #     alloc = m.addMVar(num, lb=0, ub=1, vtype=gp.GRB.CONTINUOUS, name="alloc")
-    # 
-    # temp1 = m.addMVar(num, lb=-gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, ub=gp.GRB.INFINITY, name="temp1")
-    # temp2 = m.addMVar(num, lb=-gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, ub=gp.GRB.INFINITY, name="temp2")
-    # 
-    # temp3 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp3")
-    # temp4 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp4")
-    # 
-    # temp6 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp6")
-    # 
-    # temp5 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp5")
-    # 
-    # temp8 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp8")
-    # 
-    # for idx in range(num):
-    #     m.addConstr(temp1[idx] == mu[idx], name='c1')
-    # 
-    # for idx in range(num):
-    #     m.addConstr(temp2[idx] == (alloc[idx] - beta[idx]), name="c2" + str(idx))
-    # 
-    # for idx in range(num):
-    #     m.addConstr(temp3[idx] == temp2[idx] * diag[idx], name='c3' + str(idx))
-    # 
-    # for idx in range(num):
-    #     m.addConstr(temp4[idx] == temp2[idx] * temp3[idx], name='c4' + str(idx))
-    # 
-    # for idx in range(num):
-    #     m.addConstr(temp5[idx] == temp4[idx] * zeta, name='c5' + str(idx))
-    # 
-    # for idx in range(num):
-    #     m.addConstr(temp6[idx] == temp1[idx] * temp2[idx], name='c6' + str(idx))
-    # 
-    # for idx in range(num):
-    #     m.addConstr(temp8[idx] == temp6[idx] - temp5[idx], name='c7' + str(idx))
-    # 
-    # for idx in range(num):
-    #     m.addConstr(beta[idx] >= 0, name='c8' + str(idx))
-    # 
-    # for idx in range(n_reviewers):
-    #     m.addConstr(gp.quicksum(alloc[idx * n_papers + jdx] for jdx in range(n_papers)) <= loads[idx],
-    #                 name="c9" + str(idx))
-    # 
-    # for idx in range(n_papers):
-    #     m.addConstr(
-    #         gp.quicksum(alloc[jdx * n_papers + idx] for jdx in range(n_reviewers)) == covs[idx],
-    #         name="c10" + str(idx))
-    # 
-    # m.addConstr(lamda * zeta * 4 == 1, name='c11')
-    # 
-    # m.addConstr(lrs == lamda * rsquared, name='c12')
-    # 
-    # m.addConstr(lamda >= 0.0, name="c13")
-    # m.addConstr(zeta >= 0, name="c14")
-    # 
-    # m.params.NonConvex = 2
-    # m.setObjective(gp.quicksum(temp8[idx] for idx in range(num)) - lrs, gp.GRB.MAXIMIZE)
-    # m.setParam('OutputFlag', 1)
-    # 
-    # m.optimize(softtime)
-    # alloc_v = alloc.X
-    # 
-    # lamda_v = lamda.X
-    # beta_v = beta.X
-    # diff = (alloc_v - beta_v)
-    # affinity = mu - (diff * diag) / (2 * lamda_v)
-    # if check == True:
-    #     sigma = np.eye(num) * var
-    #     print(check_ellipsoid(sigma, mu, affinity, rsquared))
-    # m.dispose()
-    # 
-    # del m
-    # return affinity, alloc_v
+# def solve_max_min_alt(tpms, covs, loads, std_devs, integer=True, rsquared=None, check=False):
+#     """
+#     :param tpms: 2d matrix of size #reviewers x #papers representing means
+#     :param covs: 1d numpy array with length # papers representing no of reviews required per paper
+#     :param loads: 1d numpy array with length # reviewers representing maximum no of papers per reviewer
+#     :param std_devs: 2d matrix of size #reviewers x #papers representing std devs
+#     :param noise_model: "ball" or "ellipse"
+#     :param integer:
+#     :return: 2d matrix #reviewers x #papers representing allocation and another 2d matrix #reviewers x #papers
+#         representing affinite scores
+#     """
+#     # tpms = np.array(tpms)
+#     # std_devs = np.array(std_devs)
+#     # covs = np.array(covs)
+#     # loads = np.array(loads)
+#     # n_reviewers = tpms.shape[0]
+#     # n_papers = tpms.shape[1]
+#     #
+#     # assert (np.all(covs <= n_reviewers))
+#     #
+#     # if rsquared is None:
+#     #     rsquared = chi2.ppf(.95, tpms.size)
+#     #
+#     # num = int(n_reviewers * n_papers)
+#     # m = gp.Model()
+#     # mu = tpms.flatten()
+#     # var = (std_devs.flatten()) ** 2
+#     # diag = var
+#     # idiag = 1.0 / var
+#     #
+#     # lamda = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "lamda")
+#     #
+#     # beta = m.addMVar(num, lb=0, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="beta")
+#     #
+#     # zeta = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "zeta")
+#     #
+#     # lrs = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "lrs")
+#     #
+#     # if integer == True:
+#     #     alloc = m.addMVar(num, lb=0, ub=1, vtype=gp.GRB.INTEGER, name="alloc")
+#     # else:
+#     #     alloc = m.addMVar(num, lb=0, ub=1, vtype=gp.GRB.CONTINUOUS, name="alloc")
+#     #
+#     # temp1 = m.addMVar(num, lb=-gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, ub=gp.GRB.INFINITY, name="temp1")
+#     # temp2 = m.addMVar(num, lb=-gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, ub=gp.GRB.INFINITY, name="temp2")
+#     #
+#     # temp3 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp3")
+#     # temp4 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp4")
+#     #
+#     # temp6 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp6")
+#     #
+#     # temp5 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp5")
+#     #
+#     # temp8 = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp8")
+#     #
+#     # for idx in range(num):
+#     #     m.addConstr(temp1[idx] == mu[idx], name='c1')
+#     #
+#     # for idx in range(num):
+#     #     m.addConstr(temp2[idx] == (alloc[idx] - beta[idx]), name="c2" + str(idx))
+#     #
+#     # for idx in range(num):
+#     #     m.addConstr(temp3[idx] == temp2[idx] * diag[idx], name='c3' + str(idx))
+#     #
+#     # for idx in range(num):
+#     #     m.addConstr(temp4[idx] == temp2[idx] * temp3[idx], name='c4' + str(idx))
+#     #
+#     # for idx in range(num):
+#     #     m.addConstr(temp5[idx] == temp4[idx] * zeta, name='c5' + str(idx))
+#     #
+#     # for idx in range(num):
+#     #     m.addConstr(temp6[idx] == temp1[idx] * temp2[idx], name='c6' + str(idx))
+#     #
+#     # for idx in range(num):
+#     #     m.addConstr(temp8[idx] == temp6[idx] - temp5[idx], name='c7' + str(idx))
+#     #
+#     # for idx in range(num):
+#     #     m.addConstr(beta[idx] >= 0, name='c8' + str(idx))
+#     #
+#     # for idx in range(n_reviewers):
+#     #     m.addConstr(gp.quicksum(alloc[idx * n_papers + jdx] for jdx in range(n_papers)) <= loads[idx],
+#     #                 name="c9" + str(idx))
+#     #
+#     # for idx in range(n_papers):
+#     #     m.addConstr(
+#     #         gp.quicksum(alloc[jdx * n_papers + idx] for jdx in range(n_reviewers)) == covs[idx],
+#     #         name="c10" + str(idx))
+#     #
+#     # m.addConstr(lamda * zeta * 4 == 1, name='c11')
+#     #
+#     # m.addConstr(lrs == lamda * rsquared, name='c12')
+#     #
+#     # m.addConstr(lamda >= 0.0, name="c13")
+#     # m.addConstr(zeta >= 0, name="c14")
+#     #
+#     # m.params.NonConvex = 2
+#     # m.setObjective(gp.quicksum(temp8[idx] for idx in range(num)) - lrs, gp.GRB.MAXIMIZE)
+#     # m.setParam('OutputFlag', 1)
+#     #
+#     # m.optimize(softtime)
+#     # alloc_v = alloc.X
+#     #
+#     # lamda_v = lamda.X
+#     # beta_v = beta.X
+#     # diff = (alloc_v - beta_v)
+#     # affinity = mu - (diff * diag) / (2 * lamda_v)
+#     # if check == True:
+#     #     sigma = np.eye(num) * var
+#     #     print(check_ellipsoid(sigma, mu, affinity, rsquared))
+#     # m.dispose()
+#     #
+#     # del m
+#     # return affinity, alloc_v
+#
+#     tpms = np.array(tpms)
+#     std_devs = np.array(std_devs)
+#     covs = np.array(covs)
+#     loads = np.array(loads)
+#     n_reviewers = int(tpms.shape[0])
+#     n_papers = int(tpms.shape[1])
+#
+#     assert (np.all(covs <= n_reviewers))
+#
+#     if rsquared is None:
+#         rsquared = chi2.ppf(.95, tpms.size)
+#
+#     num = int(n_reviewers * n_papers)
+#     m = gp.Model()
+#     mu = tpms.flatten()
+#     var = (std_devs.flatten()) ** 2
+#     diag = var
+#     Sigma = np.diag(diag)
+#     Sigma_inv = np.linalg.inv(Sigma)
+#     idiag = 1.0 / var
+#
+#     lamda = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "lamda")
+#
+#     beta = m.addMVar(num, lb=0, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="beta")
+#
+#     zeta = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "zeta")
+#
+#     temp = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp")
+#
+#     if integer == True:
+#         alloc = m.addMVar(num, lb=0, ub=1, vtype=gp.GRB.INTEGER, name="alloc")
+#     else:
+#         alloc = m.addMVar(num, lb=0, ub=1, vtype=gp.GRB.CONTINUOUS, name="alloc")
+#
+#     zeros = np.zeros(num)
+#     m.addConstr(beta >= zeros, name='c8')
+#
+#     m.addConstrs(alloc[idx * n_papers:(idx+1) * n_papers].sum() <= loads[idx] for idx in range(n_reviewers))
+#
+#     m.addConstrs(
+#         gp.quicksum(alloc[jdx * n_papers + idx] for jdx in range(n_reviewers)) == covs[idx] for idx in range(n_papers))
+#
+#     m.addConstr(lamda * zeta * 4 == 1, name='c11')
+#
+#     m.params.NonConvex = 2
+#     m.addConstr(temp == (alloc - beta) * zeta)
+#
+#     m.setObjective((alloc - beta) @ mu - ((alloc - beta) @ Sigma @ temp) - lamda * rsquared, gp.GRB.MAXIMIZE)
+#     m.setParam('OutputFlag', 1)
+#
+#     m.optimize(softtime)
+#     alloc_v = alloc.X
+#
+#     lamda_v = lamda.X
+#     beta_v = beta.X
+#     diff = (alloc_v - beta_v)
+#     affinity = mu - (diff * diag) / (2 * lamda_v)
+#     if check:
+#         sigma = np.eye(num) * var
+#         print(check_ellipsoid(sigma, mu, affinity, rsquared))
+#     m.dispose()
+#
+#     del m
+#     return affinity, alloc_v.reshape(n_reviewers, n_papers)
+
+
+def solve_max_min_alt(tpms, covs, loads, std_devs, r):
 
     tpms = np.array(tpms)
     std_devs = np.array(std_devs)
@@ -802,63 +871,6 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, integer=True, rsquared=None, 
     n_reviewers = int(tpms.shape[0])
     n_papers = int(tpms.shape[1])
 
-    assert (np.all(covs <= n_reviewers))
-    
-    if rsquared is None:
-        rsquared = chi2.ppf(.95, tpms.size)
-    
-    num = int(n_reviewers * n_papers)
-    m = gp.Model()
-    mu = tpms.flatten()
-    var = (std_devs.flatten()) ** 2
-    diag = var
-    Sigma = np.diag(diag)
-    Sigma_inv = np.linalg.inv(Sigma)
-    idiag = 1.0 / var
-    
-    lamda = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "lamda")
-    
-    beta = m.addMVar(num, lb=0, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="beta")
-    
-    zeta = m.addVar(0.0, gp.GRB.INFINITY, 0.0, gp.GRB.CONTINUOUS, "zeta")
-    
-    temp = m.addMVar(num, lb=-gp.GRB.INFINITY, ub=gp.GRB.INFINITY, vtype=gp.GRB.CONTINUOUS, name="temp")
-    
-    if integer == True:
-        alloc = m.addMVar(num, lb=0, ub=1, vtype=gp.GRB.INTEGER, name="alloc")
-    else:
-        alloc = m.addMVar(num, lb=0, ub=1, vtype=gp.GRB.CONTINUOUS, name="alloc")
-    
-    zeros = np.zeros(num)
-    m.addConstr(beta >= zeros, name='c8')
-
-    m.addConstrs(alloc[idx * n_papers:(idx+1) * n_papers].sum() <= loads[idx] for idx in range(n_reviewers))
-    
-    m.addConstrs(
-        gp.quicksum(alloc[jdx * n_papers + idx] for jdx in range(n_reviewers)) == covs[idx] for idx in range(n_papers))
-
-    m.addConstr(lamda * zeta * 4 == 1, name='c11')
-
-    m.params.NonConvex = 2
-    m.addConstr(temp == (alloc - beta) * zeta)
-    
-    m.setObjective((alloc - beta) @ mu - ((alloc - beta) @ Sigma @ temp) - lamda * rsquared, gp.GRB.MAXIMIZE)
-    m.setParam('OutputFlag', 1)
-    
-    m.optimize(softtime)
-    alloc_v = alloc.X
-    
-    lamda_v = lamda.X
-    beta_v = beta.X
-    diff = (alloc_v - beta_v)
-    affinity = mu - (diff * diag) / (2 * lamda_v)
-    if check:
-        sigma = np.eye(num) * var
-        print(check_ellipsoid(sigma, mu, affinity, rsquared))
-    m.dispose()
-    
-    del m
-    return affinity, alloc_v.reshape(n_reviewers, n_papers)
 
 
 def get_worst_case_alt(alloc, tpms, std_devs, noise_model="ball", rsquared=None, check=False):

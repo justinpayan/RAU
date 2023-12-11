@@ -864,11 +864,13 @@ def softtime(model, where):
 
 
 def solve_max_min_alt(tpms, covs, loads, std_devs, r):
-    alloc = cp.Variable(tpms.shape)
-    beta = cp.Variable(tpms.shape)
-    lam = cp.Variable(1)
+    alloc = cp.Variable(tpms.shape, nonneg=True)
+    beta = cp.Variable(tpms.shape, pos=True)
+    lam = cp.Variable(1, pos=True)
 
-    constraints = [lam >= 0, beta >= 0, alloc >= 0, alloc <= 1,
+    # lam >= 0, beta >= 0, alloc >= 0,
+
+    constraints = [alloc <= 1,
                    cp.sum(alloc, axis=0) == covs, cp.sum(alloc, axis=1) <= loads]
 
     obj = cp.sum(cp.multiply((alloc - beta), tpms))

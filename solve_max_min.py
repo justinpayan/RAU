@@ -210,7 +210,7 @@ def get_worst_case_usw_standalone(alloc, tpms, std_devs, r):
 
     adv_prob = cp.Problem(cp.Minimize(cp.sum(cp.multiply(alloc_param, u))),
                           soc_constraint + [u >= np.zeros(u.shape), u <= np.ones(u.shape)])
-    adv_prob.solve()
+    adv_prob.solve(solver="GUROBI")
     worst_s = u.value
 
     return np.sum(worst_s * alloc)
@@ -247,7 +247,7 @@ def get_worst_case_gesw_standalone(alloc, tpms, std_devs, r, group_labels):
     alloc_param.value = alloc
 
     for group_id, adv_prob in enumerate(adv_probs):
-        adv_prob.solve()
+        adv_prob.solve(solver="GUROBI")
         worst_s = u.value
         obj_value = np.sum(select_group(worst_s * alloc, group_labels, group_id)) / group_sizes[group_id]
         if obj_value < worst_obj:
@@ -333,7 +333,7 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         if caching:
             # alloc_param.value = alloc.ravel()
             alloc_param.value = alloc
-            adv_prob.solve(warm_start=True)
+            adv_prob.solve(warm_start=True, solver="GUROBI")
             worst_s = u.value
             # worst_s = u.value.reshape(tpms.shape)
         else:
@@ -508,7 +508,7 @@ def solve_max_min_gesw(tpms, covs, loads, std_devs, group_labels, dykstra=False,
         worst_group_id = 0
 
         for group_id, adv_prob in enumerate(adv_probs):
-            adv_prob.solve(warm_start=True)
+            adv_prob.solve(warm_start=True, solver="GUROBI")
             worst_s = u.value
             obj_value = np.sum(select_group(worst_s * alloc, group_labels, group_id))/group_sizes[group_id]
             if obj_value < worst_obj:
@@ -881,7 +881,7 @@ def solve_max_min_alt(tpms, covs, loads, std_devs, r):
     print("obj is concave: ", obj.is_concave())
     print("obj is quasiconcave: ", obj.is_quasiconcave())
 
-    obj -= np.exp(loglam) * r
+    obj -= cp.exp(loglam) * r
     print("obj is concave: ", obj.is_concave())
     print("obj is quasiconcave: ", obj.is_quasiconcave())
 

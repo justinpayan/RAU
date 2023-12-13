@@ -77,6 +77,11 @@ if __name__ == "__main__":
 
     r = r_values[r_idx]
     delta_values = np.load(os.path.join(data_dir, "data", "iclr", "delta_vals.npy"))
+    if r_idx < len(delta_values):
+        delta = delta_values[r_idx]
+    else:
+        delta = 0.0
+
     print("delta = %.4f, r_idx = %d, r = %.4f" % (delta_values[r_idx], r_idx, r))
 
     # group_labels = np.load(os.path.join(data_dir, "data", "iclr", "group_ids_%d.npy" % year))

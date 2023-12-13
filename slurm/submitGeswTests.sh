@@ -12,12 +12,12 @@ LOG_DIR=/mnt/nfs/scratch1/jpayan/logs/RAU
 #done
 
 for YEAR in {2018..2022}; do
-  for ALGO in LP GESW; do
-    sbatch --time=00-3:00:00 --partition=defq \
-    --nodes=1 --ntasks=1 --mem=30G --output=$LOG_DIR/gesw_tests_${YEAR}_${ALGO}.out \
-    --error=$LOG_DIR/gesw_tests_${YEAR}_${ALGO}.err --job-name=gesw_tests_${YEAR}_${ALGO} \
-    ./geswTests.sh $DATA_DIR $YEAR $ALGO 0
-  done
+#  for ALGO in LP GESW; do
+#    sbatch --time=00-3:00:00 --partition=defq \
+#    --nodes=1 --ntasks=1 --mem=30G --output=$LOG_DIR/gesw_tests_${YEAR}_${ALGO}.out \
+#    --error=$LOG_DIR/gesw_tests_${YEAR}_${ALGO}.err --job-name=gesw_tests_${YEAR}_${ALGO} \
+#    ./geswTests.sh $DATA_DIR $YEAR $ALGO 0
+#  done
 
   for ALGO in RRA RRA_ORIG RRA_GESW; do
     for R_IDX in {8..15}; do

@@ -82,7 +82,7 @@ if __name__ == "__main__":
     else:
         delta = 0.0
 
-    print("delta = %.4f, r_idx = %d, r = %.4f" % (delta_values[r_idx], r_idx, r))
+    print("delta = %.4f, r_idx = %d, r = %.4f" % (delta, r_idx, r))
 
     # group_labels = np.load(os.path.join(data_dir, "data", "iclr", "group_ids_%d.npy" % year))
 

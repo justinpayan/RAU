@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     # Run the baseline, which is just TPMS
     run_type = "iclr_trunc_beta"
-    max_iter = 50
+    max_iter = 5000
     st = time.time()
     fractional_alloc_max_min = None
     if algo == "LP":

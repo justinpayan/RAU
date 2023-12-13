@@ -350,8 +350,9 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         alloc_grad = worst_s
 
         # vanilla update
-        if t % 10 == 0:
-            lr /= 2
+        # if t % 10 == 0:
+        #     lr /= 2
+        lr = 1/(t+1)
         alloc = alloc + lr * alloc_grad
 
         # Project to the set of feasible allocations
@@ -386,8 +387,8 @@ def solve_max_min(tpms, covs, loads, std_devs, caching=False, dykstra=False, noi
         else:
             steps_no_imp += 1
 
-        if steps_no_imp > 10:
-            return global_opt_alloc
+        # if steps_no_imp > 10:
+        #     return global_opt_alloc
 
         if t % 1 == 0:
             print("Step %d" % t)

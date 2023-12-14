@@ -271,7 +271,7 @@ def solve_rra_var(means, covs, loads, std_devs, run_name, alpha):
     obj = cp.sum(cp.multiply(A, means))
     obj -= np.sqrt(2 - 2*np.log(alpha))*t
     prob = cp.Problem(cp.Maximize(obj), soc_constraint + constraints)
-    prob.solve()
+    prob.solve(verbose=True)
     return A.value
 
 # Consider the tpms matrix as the center point, and then we assume

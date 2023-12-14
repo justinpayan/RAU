@@ -166,10 +166,13 @@ if __name__ == "__main__":
 
     elif algo == "RRA_VAR":
 
-        print("Solving for max VaR USW delta=%d" % delta, flush=True)
-        alloc = solve_rra_var(means, covs, loads, std_devs, run_name=run_name, alpha=delta)
-        np.save(os.path.join(data_dir, "outputs", "rra_var_alloc_%s_%d_%d.npy" % (run_type, r_idx, year)), alloc)
+        print("Solving for max VaR USW delta=%.4f" % delta, flush=True)
+        frac_alloc = solve_rra_var(means, covs, loads, std_devs, run_name=run_name, alpha=delta)
+        np.save(os.path.join(data_dir, "outputs", "rra_var_frac_alloc_%s_%d_%d.npy" % (run_type, r_idx, year)), frac_alloc)
+        alloc = bvn(frac_alloc, run_name)
         est_usw = np.sum(alloc * means)
+        np.save(os.path.join(data_dir, "outputs", "rra_var_alloc_%s_%d_%d.npy" % (run_type, r_idx, year)), alloc)
+
 
     elif algo == "RRA_GESW":
         print("Solving for max robust GESW using the original RRA formulation with r=%d" % r, flush=True)

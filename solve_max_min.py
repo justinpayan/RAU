@@ -257,7 +257,8 @@ def get_worst_case_gesw_standalone(alloc, tpms, std_devs, r, group_labels):
 
 
 def solve_rra_var(means, covs, loads, std_devs, run_name, alpha):
-    A = cp.Variable(means.shape, boolean=True)
+    # A = cp.Variable(means.shape, boolean=True)
+    A = cp.Variable(means.shape, nonneg=True)
     m, n = A.shape
     t = cp.Variable(1)
     soc_constraint = [
@@ -265,7 +266,8 @@ def solve_rra_var(means, covs, loads, std_devs, run_name, alpha):
 
     n_vec = np.ones((n, 1))
     m_vec = np.ones((m, 1))
-    constraints = [A @ n_vec <= loads.reshape((m, 1)),
+    constraints = [A <= 1,
+        A @ n_vec <= loads.reshape((m, 1)),
                    A.T @ m_vec == covs.reshape((n, 1))]
 
     obj = cp.sum(cp.multiply(A, means))

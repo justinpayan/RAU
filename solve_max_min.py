@@ -256,6 +256,24 @@ def get_worst_case_gesw_standalone(alloc, tpms, std_devs, r, group_labels):
     return worst_obj
 
 
+def solve_rra_var(means, covs, loads, std_devs, run_name, alpha):
+    A = cp.Variable(means.shape, boolean=True)
+    m, n = A.shape
+    t = cp.Variable(1)
+    soc_constraint = [
+        cp.SOC(t, cp.reshape(cp.multiply(A, std_devs), (A.size)))]
+
+    n_vec = np.ones((n, 1))
+    m_vec = np.ones((m, 1))
+    constraints = [A @ n_vec <= loads.reshape((m, 1)),
+                   A.T @ m_vec == covs.reshape((n, 1))]
+
+    obj = cp.sum(cp.multiply(A, means))
+    obj -= np.sqrt(2 - 2*np.log(alpha))*t
+    prob = cp.Problem(cp.Maximize(obj), soc_constraint + constraints)
+    prob.solve()
+    return A.value
+
 # Consider the tpms matrix as the center point, and then we assume
 # that the L2 error is not more than "error_bound". We can then run subgradient ascent to figure
 # out the maximin assignment where we worst-case over the true scores within "error_bound" of

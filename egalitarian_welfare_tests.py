@@ -5,7 +5,7 @@ from copy import deepcopy
 
 from solve_gesw import solve_gesw_gurobi
 from solve_usw import solve_usw_gurobi
-from solve_max_min import solve_max_min, solve_max_min_alt, solve_max_min_gesw, get_worst_case_gesw_standalone, get_worst_case_usw_standalone
+from solve_max_min import solve_max_min, solve_max_min_alt, solve_max_min_gesw, get_worst_case_gesw_standalone, get_worst_case_usw_standalone, solve_rra_var
 from utils import *
 import time
 import argparse
@@ -163,6 +163,13 @@ if __name__ == "__main__":
         alloc = bvn(fractional_alloc_max_min, run_name)
         est_usw = np.sum(alloc * means)
         np.save(os.path.join(data_dir, "outputs", "rra_orig_alloc_%s_%d_%d.npy" % (run_type, r_idx, year)), alloc)
+
+    elif algo == "RRA_VAR":
+
+        print("Solving for max VaR USW delta=%d" % delta, flush=True)
+        alloc = solve_rra_var(means, covs, loads, std_devs, run_name=run_name, alpha=delta)
+        np.save(os.path.join(data_dir, "outputs", "rra_var_alloc_%s_%d_%d.npy" % (run_type, r_idx, year)), alloc)
+        est_usw = np.sum(alloc * means)
 
     elif algo == "RRA_GESW":
         print("Solving for max robust GESW using the original RRA formulation with r=%d" % r, flush=True)
